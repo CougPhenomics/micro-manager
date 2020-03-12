@@ -1,5 +1,10 @@
 <project name="MMClearVolume" basedir="." default="jar">
-	<import file="../javapluginbuild.xml"/>
+        <import file="../javapluginbuild.xml"/>
+        <path id="plugin.classpath">
+                <pathelement location="/usr/share/java/jogl2.jar"/>
+        </path>
+
+	<!-- <import file="../javapluginbuild.xml"/>
 
    <!-- lots of hoopla to install the native jogamp/gluegen libraries
          Please replace with something simplere and more elegant if 
@@ -45,5 +50,5 @@
       <copy tofile="${mm.dll.installdir}/nativewindow_awt.dll" file="${mm.basedir}/../3rdpartypublic/javalib3d/lib/natives/x64/nativewindow_awt.dll"/>
       <copy tofile="${mm.dll.installdir}/nativewindow_win32.dll" file="${mm.basedir}/../3rdpartypublic/javalib3d/lib/natives/x64/nativewindow_win32.dll"/>
       <copy tofile="${mm.dll.installdir}/newt.dll" file="${mm.basedir}/../3rdpartypublic/javalib3d/lib/natives/x64/newt.dll"/>
-   </target>
+   </target> -->
 </project>
