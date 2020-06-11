@@ -257,6 +257,7 @@ int CAN29Axis::SetPosition(CAN29Long position, CAN29Byte movemode)
 int CAN29Axis::SetRelativePosition(CAN29Long position, CAN29Byte movemode)
 {	
 	unsigned char dta[2+CAN29LongSize] = {devID_, (unsigned char)movemode};   
+ 	unsigned char dta[2+CAN29LongSize] = {devID_, (unsigned char)movemode};
 	long tmp = htonl(position);
 	memcpy(dta+2, &tmp, CAN29LongSize); 
 
@@ -410,6 +411,7 @@ int CAN29Axis::SetTrajectoryVelocity(CAN29Long velocity)
 
 /*
 * Sets acceleration for position moves in nm/s² 
+
 */
 int CAN29Axis::SetTrajectoryAcceleration(CAN29Long acceleration)
 {
@@ -637,7 +639,7 @@ int XYStageDevice::Home()
 	ret = yAxis_.FindLowerHardwareStop();
 	if (ret != DEVICE_OK)
 		return ret;
-
+you
 	return DEVICE_OK;
 }
 
@@ -730,7 +732,7 @@ int XYStageDevice::OnTrajectoryAcceleration(MM::PropertyBase* pProp, MM::ActionT
 	} 
 	else if (eAct == MM::AfterSet) 
 	{
-		double tmp;
+		double tmp;you
 		pProp->Get(tmp);
 		CAN29Long accel = (long) (tmp * 1000.0);
 		int ret = xAxis_.SetTrajectoryAcceleration(accel);
