@@ -41,7 +41,7 @@ import ome.units.quantity.Time;
 import ome.xml.model.primitives.NonNegativeInteger;
 import ome.xml.model.primitives.PositiveInteger;
 import ome.xml.model.primitives.Timestamp;
-import org.json.JSONException;
+import mmcorej.org.json.JSONException;
 import org.micromanager.PropertyMap;
 import org.micromanager.data.Coords;
 import org.micromanager.data.Image;
@@ -167,8 +167,8 @@ public final class OMEMetadata {
       }
 
       String positionName = "pos" + repImage.getCoords().getStagePosition();
-      if (repMetadata.getPositionName() != null) {
-         positionName = repMetadata.getPositionName();
+      if (!repMetadata.getPositionName("").equals("")) {
+         positionName = repMetadata.getPositionName("");
       }
       metadata_.setStageLabelName(positionName, seriesIndex);
 

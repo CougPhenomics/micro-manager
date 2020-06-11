@@ -32,12 +32,15 @@ import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
@@ -97,13 +100,15 @@ import org.micromanager.internal.hcwizard.MMConfigFileException;
 import org.micromanager.internal.hcwizard.MicroscopeModel;
 import org.micromanager.internal.logging.LogFileManager;
 import org.micromanager.internal.menus.MMMenuBar;
+import org.micromanager.internal.navigation.UiMovesStageManager;
 import org.micromanager.internal.pipelineinterface.PipelineFrame;
 import org.micromanager.internal.pluginmanagement.DefaultPluginManager;
-import org.micromanager.internal.positionlist.PositionListDlg;
+import org.micromanager.internal.positionlist.MMPositionListDlg;
 import org.micromanager.internal.propertymap.DefaultPropertyMap;
 import org.micromanager.internal.script.ScriptPanel;
 import org.micromanager.internal.utils.DaytimeNighttime;
 import org.micromanager.internal.utils.DefaultAutofocusManager;
+import org.micromanager.internal.utils.HotKeys;
 import org.micromanager.internal.utils.UserProfileManager;
 import org.micromanager.internal.utils.FileDialogs;
 import org.micromanager.internal.utils.GUIUtils;
@@ -116,6 +121,7 @@ import org.micromanager.profile.internal.UserProfileAdmin;
 import org.micromanager.profile.internal.gui.HardwareConfigurationManager;
 import org.micromanager.quickaccess.QuickAccessManager;
 import org.micromanager.quickaccess.internal.DefaultQuickAccessManager;
+
 
 /*
  * Implements the Studio (i.e. primary API) and does various other
@@ -135,7 +141,7 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
    private static final String CIRCULAR_BUFFER_SIZE = "size, in megabytes of the circular buffer used to temporarily store images before they are written to disk";
    private static final String AFFINE_TRANSFORM_LEGACY = "affine transform for mapping camera coordinates to stage coordinates for a specific pixel size config: ";
    private static final String AFFINE_TRANSFORM = "affine transform parameters for mapping camera coordinates to stage coordinates for a specific pixel size config: ";
-
+   private static final String EXPOSURE_KEY = "Exposure_";
    
    // GUI components
    private boolean wasStartedAsImageJPlugin_;
@@ -159,12 +165,13 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
    private DefaultEventManager eventManager_;
    private ApplicationSkin daytimeNighttimeManager_;
    private UserProfileManager userProfileManager_;
+   private UiMovesStageManager uiMovesStageManager_;
    
    // MMcore
    private CMMCore core_;
    private AcquisitionWrapperEngine acqEngine_;
    private PositionList posList_;
-   private PositionListDlg posListDlg_;
+   private MMPositionListDlg posListDlg_;
    private boolean isProgramRunning_;
    private boolean configChanged_ = false;
    private boolean isClickToMoveEnabled_ = false;
@@ -288,11 +295,17 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
       
       // Lots of places use this. instantiate it first.
       eventManager_ = new DefaultEventManager();
+
+      // used by Snap/Live Manager and StageControlFrame
+      uiMovesStageManager_ = new UiMovesStageManager(this);
+      events().registerForEvents(uiMovesStageManager_);
       
       snapLiveManager_ = new SnapLiveManager(this, core_);
       events().registerForEvents(snapLiveManager_);
 
       shutterManager_ = new DefaultShutterManager(studio_);
+      // DisplayManager needs to be created before Pipelineframe and albumInstance
+      displayManager_ = new DefaultDisplayManager(this);
       albumInstance_ = new DefaultAlbum(studio_);
 
       // The tools menu depends on the Quick-Access Manager.
@@ -302,21 +315,22 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
       acqEngine_.setParentGUI(this);
       acqEngine_.setZStageDevice(core_.getFocusDevice());
 
-      
-      // DisplayManager needs to be created before Pipelineframe
-      displayManager_ = new DefaultDisplayManager(this);
+
       
       // Load, but do not show, image pipeline panel.
       // Note: pipelineFrame is used in the dataManager, however, pipelineFrame 
       // needs the dataManager.  Let's hope for the best....
       dataManager_ = new DefaultDataManager(studio_);
-      createPipelineFrame();
+      if (pipelineFrame_ == null) { //Create the pipelineframe if it hasn't already been done.
+         pipelineFrame_ = new PipelineFrame(studio_);
+      }
 
       alertManager_ = new DefaultAlertManager(studio_);
       
       afMgr_ = new DefaultAutofocusManager(studio_);
       afMgr_.refresh();
-      String afDevice = profile().getString(MMStudio.class, AUTOFOCUS_DEVICE, "");
+      String afDevice = profile().getSettings(MMStudio.class).
+              getString(AUTOFOCUS_DEVICE, "");
       if (afMgr_.hasDevice(afDevice)) {
          afMgr_.setAutofocusMethodByName(afDevice);
       }
@@ -462,19 +476,16 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
       mmMenuBar_ = MMMenuBar.createMenuBar(studio_);
       frame_ = new MainFrame(this, core_);
       staticInfo_ = new StaticInfo(studio_, frame_);
+      events().registerForEvents(staticInfo_);
       frame_.toFront();
       frame_.setVisible(true);
       ReportingUtils.SetContainingFrame(frame_);
       frame_.initializeConfigPad();
 
       // We wait until after showing the main window to enable hot keys
-      hotKeys_ = new org.micromanager.internal.utils.HotKeys();
+      hotKeys_ = new HotKeys();
       hotKeys_.loadSettings(userProfileManager_.getProfile());
-      // zWheelListener_ = new ZWheelListener(core_, studio_);
-      // getEventManager().registerForEvents(zWheelListener_);
-      // TODO snapLiveManager_.addLiveModeListener(zWheelListener_);
-      // xyzKeyListener_ = new XYZKeyListener(core_, studio_);
-      // TODO snapLiveManager_.addLiveModeListener(xyzKeyListener_);
+
 
       // Switch error reporting back on TODO See above where it's turned off
       ReportingUtils.showErrorOn(true);
@@ -591,8 +602,7 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
          try {
             channelGroup = core_.getChannelGroup();
             channel = core_.getCurrentConfigFromCache(channelGroup);
-            AcqControlDlg.storeChannelExposure(
-                  channelGroup, channel, exposureTime);
+            storeChannelExposureTime(channelGroup, channel, exposureTime);
          }
          catch (Exception e) {
             studio_.logs().logError("Unable to determine channel group");
@@ -901,25 +911,38 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
       scriptPanel_ = new ScriptPanel(studio_);
    }
    
-   public void runZMQServer() {
+  public void runZMQServer() {
       if (zmqServer_ == null) {
-         zmqServer_ = new ZMQServer(studio_);
+         //Make a function that passes existing instances of core and studio,
+         //rather than constructing them
+         Function<Class, Object> instanceGrabberFunction = new Function<Class, Object>() {
+            @Override
+            public Object apply(Class baseClass) {
+               //return instances of existing objects
+               if (baseClass.equals(Studio.class)) {
+                  return studio_;
+               } else if (baseClass.equals(CMMCore.class)) {
+                  return studio_.getCMMCore();
+               }
+               return null;
+            }
+         };
+         try {
+            zmqServer_ = new ZMQServer(IJ.getClassLoader(), instanceGrabberFunction, new String[]{"org.micromanager.internal"});
+            logs().logMessage("Initialized ZMQ Server on port: " + ZMQServer.DEFAULT_MASTER_PORT_NUMBER);
+         } catch (URISyntaxException | UnsupportedEncodingException e) {
+            studio_.logs().logError("Failed to initialize ZMQ Server");
+            studio_.logs().logError(e);
+         }
+
       }
-      zmqServer_.initialize(ZMQServer.DEFAULT_PORT_NUMBER);
-      logs().logMessage("Initialized ZMQ Server on port: " + ZMQServer.DEFAULT_PORT_NUMBER);
    }
-   
+
    public void stopZMQServer() {
       if (zmqServer_ != null) {
          zmqServer_.close();
          logs().logMessage("Stopped ZMQ Server");
          zmqServer_ = null;
-      }
-   }
-
-   private void createPipelineFrame() {
-      if (pipelineFrame_ == null) {
-         pipelineFrame_ = new PipelineFrame(studio_);
       }
    }
 
@@ -956,15 +979,6 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
 
    public boolean getIsClickToMoveEnabled() {
       return isClickToMoveEnabled_;
-   }
-   
-   // Ensure that the "XY list..." dialog exists.
-   private void checkPosListDlg() {
-      if (posListDlg_ == null) {
-         posListDlg_ = new PositionListDlg(core_, studio_, posList_, 
-                 acqControlWin_);
-         posListDlg_.addListeners();
-      }
    }
    
 
@@ -1019,18 +1033,6 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
          return false;
       }
       return true;
-   }
-
-   private boolean isCurrentImageFormatSupported() {
-      long channels = core_.getNumberOfComponents();
-      long bpp = core_.getBytesPerPixel();
-
-      if (channels > 1 && channels != 4 && bpp != 1) {
-         handleError("Unsupported image format.");
-      } else {
-         return true;
-      }
-      return false;
    }
 
    private void configureBinningCombo() throws Exception {
@@ -1226,7 +1228,7 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
 
       // NOTE: do not save auto shutter state
       if (afMgr_ != null && afMgr_.getAutofocusMethod() != null) {
-         profile().setString(MMStudio.class,
+         profile().getSettings(MMStudio.class).putString(
                AUTOFOCUS_DEVICE, afMgr_.getAutofocusMethod().getName());
       }
    }
@@ -1313,15 +1315,15 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
    }
 
    private void executeStartupScript() {
-      String filename = ScriptPanel.getStartupScript();
+      String filename = ScriptPanel.getStartupScript(this);
       if (filename == null || filename.length() <= 0) {
-         ReportingUtils.logMessage("No startup script to run");
+         logs().logMessage("No startup script to run");
          return;
       }
 
       File f = new File(filename);
       if (!f.exists()) {
-         ReportingUtils.logMessage("Startup script (" +
+         logs().logMessage("Startup script (" +
                f.getAbsolutePath() + ") not present");
          return;
       }
@@ -1479,7 +1481,11 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
     */
    @Override
    public void showPositionList() {
-      checkPosListDlg();
+      if (posListDlg_ == null) {
+         posListDlg_ = new MMPositionListDlg(studio_, posList_, 
+                 acqControlWin_);
+         posListDlg_.addListeners();
+      }
       posListDlg_.setVisible(true);
    }
 
@@ -1505,8 +1511,14 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
    @Override
    public double getChannelExposureTime(String channelGroup, String channel,
            double defaultExp) {
-      return AcqControlDlg.getChannelExposure(channelGroup, channel,
-            defaultExp);
+      return this.profile().getSettings(MMStudio.class).getDouble(
+              EXPOSURE_KEY + channelGroup + "_" + channel, defaultExp);
+   }
+
+   public void storeChannelExposureTime(String channelGroup, String channel,
+                                      double exposure) {
+      this.profile().getSettings(MMStudio.class).putDouble(
+              EXPOSURE_KEY + channelGroup + "_" + channel, exposure);
    }
 
    /**
@@ -1523,7 +1535,7 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
    public void setChannelExposureTime(String channelGroup, String channel,
            double exposure) {
       try {
-         AcqControlDlg.storeChannelExposure(channelGroup, channel, exposure);
+         storeChannelExposureTime(channelGroup, channel, exposure);
          if (channelGroup != null && channelGroup.equals(core_.getChannelGroup())) {
             if (channel != null && !channel.equals("") && 
                     channel.equals(core_.getCurrentConfigFromCache(channelGroup))) {
@@ -1801,17 +1813,20 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
       return alerts();
    }
 
+
+   public UiMovesStageManager getUiMovesStageManager () {
+      return uiMovesStageManager_;
+   }
+
    @Override
+   @Deprecated
    public AffineTransform getCameraTransform(String config) {
       // Try the modern way first
-      Double[] params = profile().getDoubleArray(
-            MMStudio.class, AFFINE_TRANSFORM + config, null);
+      double[] defaultParams = new double[0];
+      double[] params = profile().getSettings(MMStudio.class).
+              getDoubleList(AFFINE_TRANSFORM + config, defaultParams);
       if (params != null && params.length == 6) {
-         double[] unboxed = new double[6];
-         for (int i = 0; i < 6; ++i) {
-            unboxed[i] = params[i];
-         }
-         return new AffineTransform(unboxed);
+         return new AffineTransform(params);
       }
 
       // The early 2.0-beta way of storing as a serialized object.
@@ -1828,7 +1843,8 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
 
       // For backwards compatibility, try retrieving it from the 1.4
       // Preferences instead.
-      AffineTransform tfm = org.micromanager.internal.utils.UnpleasantLegacyCode.legacyRetrieveTransformFromPrefs("affine_transform_" + config);
+      AffineTransform tfm = org.micromanager.internal.utils.UnpleasantLegacyCode.
+              legacyRetrieveTransformFromPrefs("affine_transform_" + config);
       if (tfm != null) {
          // Save it the new way.
          setCameraTransform(tfm, config);
@@ -1837,16 +1853,11 @@ public final class MMStudio implements Studio, CompatibilityInterface, PositionL
    }
 
    @Override
+   @Deprecated
    public void setCameraTransform(AffineTransform transform, String config) {
-      // TODO These values should be tied to the hardware config, but before we
-      // do that we need to have a way of chainging config files.
       double[] params = new double[6];
       transform.getMatrix(params);
-      Double[] boxed = new Double[6];
-      for (int i = 0; i < 6; ++i) {
-         boxed[i] = params[i];
-      }
-      profile().setDoubleArray(MMStudio.class, AFFINE_TRANSFORM + config, boxed);
+      profile().getSettings(MMStudio.class).putDoubleList(AFFINE_TRANSFORM + config, params);
    }
 
    public double getCachedXPosition() {
