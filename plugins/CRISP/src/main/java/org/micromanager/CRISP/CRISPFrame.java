@@ -25,6 +25,7 @@ import java.awt.geom.Ellipse2D;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
+
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JSeparator;
@@ -49,12 +50,7 @@ import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
 import org.micromanager.Studio;
-
-// Imports for MMStudio internal packages
-// Plugins should not access internal packages, to ensure modularity and
-// maintainability. However, this plugin code is older than the current
-// MMStudio API, so it still uses internal classes and interfaces. New code
-// should not imitate this practice.
+import org.micromanager.internal.utils.ReportingUtils;
 import org.micromanager.internal.utils.MMFrame;
 
 /**
@@ -180,7 +176,7 @@ public class CRISPFrame extends MMFrame {
          AGCLabel_.setText(val);
          
        } catch (Exception ex) {
-          gui_.logs().showError("Error reading values from CRISP");
+          ReportingUtils.showError("Error reading values from CRISP");
        }
 
     }
@@ -351,7 +347,7 @@ public class CRISPFrame extends MMFrame {
                 try {
                     core_.setProperty(CRISP_, "Max Lock Range(mm)", (float) newRangeValue / 1000.0);
                 } catch (Exception ex) {
-                    gui_.logs().showError("Problem while setting LED intensity");
+                    ReportingUtils.showError("Problem while setting LED intensity");
                 }
             }
         });
@@ -371,7 +367,7 @@ public class CRISPFrame extends MMFrame {
                 try {
                     core_.setProperty(CRISP_, "CRISP State", "Idle");
                 } catch (Exception ex) {
-                    gui_.logs().showError("Problem setting Idle State");
+                    ReportingUtils.showError("Problem setting Idle State");
                 }
             }
         });
@@ -444,7 +440,7 @@ public class CRISPFrame extends MMFrame {
           try {
              core_.enableContinuousFocus(true);
           } catch (Exception ex) {
-             gui_.alerts().postAlert("CRISP", this.getClass(), "Failed to lock");
+             ReportingUtils.displayNonBlockingMessage("Failed to lock");
           }
 
           lockButton_.setSelected(true);
@@ -454,7 +450,7 @@ public class CRISPFrame extends MMFrame {
           try {
              core_.enableContinuousFocus(false);
           } catch (Exception ex) {
-             gui_.alerts().postAlert("CRISP", this.getClass(), "Failed to unlock");
+             ReportingUtils.displayNonBlockingMessage("Failed to unlock");
           }
 
           lockButton_.setSelected(false);
@@ -483,7 +479,7 @@ public class CRISPFrame extends MMFrame {
          Double snr = new Double(core_.getProperty(CRISP_, "Signal Noise Ratio"));
 
          if (snr < 2.0)
-            gui_.logs().showMessage("Signal Noise Ratio is smaller than 2.0.  " +
+            ReportingUtils.showMessage("Signal Noise Ratio is smaller than 2.0.  " +
                     "Focus on your sample, increase LED intensity and try again.");
 
          core_.setProperty(CRISP_, "CRISP State", "Dither");
@@ -508,7 +504,7 @@ public class CRISPFrame extends MMFrame {
                try {
                  jl.setText(core_.getProperty(CRISP_, "Dither Error"));
                } catch (Exception ex) {
-                  gui_.logs().logError("Error while getting CRISP dither Error");
+                  ReportingUtils.logError("Error while getting CRISP dither Error");
                }
             }
          };
@@ -530,7 +526,7 @@ public class CRISPFrame extends MMFrame {
             counter++;
          }
       } catch (Exception ex) {
-         gui_.logs().showMessage("Calibration failed. Focus, make sure that the NA variable is set correctly and try again." + 
+         ReportingUtils.showMessage("Calibration failed. Focus, make sure that the NA variable is set correctly and try again." + 
                "\nYou can also try increasing the serial port timeout in the HCW."); 
       }
     }
@@ -542,7 +538,7 @@ public class CRISPFrame extends MMFrame {
        try {
           core_.setProperty(CRISP_, "LED Intensity", newLEDValue);
        } catch (Exception ex) {
-          gui_.logs().showError("Problem while setting LED intensity");
+          ReportingUtils.showError("Problem while setting LED intensity");
        }
     }
 
@@ -553,7 +549,7 @@ public class CRISPFrame extends MMFrame {
        try {
           core_.setProperty(CRISP_, "GainMultiplier", newGainValue);
        } catch (Exception ex) {
-          gui_.logs().showError("Problem while setting LED intensity");
+          ReportingUtils.showError("Problem while setting LED intensity");
        }
     }
 
@@ -564,7 +560,7 @@ public class CRISPFrame extends MMFrame {
        try {
           core_.setProperty(CRISP_, "Number of Averages", newNrAvgValue);
        } catch (Exception ex) {
-          gui_.logs().showError("Problem while setting LED intensity");
+          ReportingUtils.showError("Problem while setting LED intensity");
        }
     }
 
@@ -575,7 +571,7 @@ public class CRISPFrame extends MMFrame {
        try {
           core_.setProperty(CRISP_, "Objective NA", newNAValue);
        } catch (Exception ex) {
-          gui_.logs().showError("Problem while setting LED intensity");
+          ReportingUtils.showError("Problem while setting LED intensity");
        }
     }
 
@@ -583,7 +579,7 @@ public class CRISPFrame extends MMFrame {
        try {
           core_.setProperty(CRISP_, "CRISP State", "Reset Focus Offset");
        } catch (Exception ex) {
-          gui_.logs().showError("Problem resetting Focus Offset");
+          ReportingUtils.showError("Problem resetting Focus Offset");
        }
     }
 
@@ -617,7 +613,7 @@ public class CRISPFrame extends MMFrame {
               "Focus Error Signal", 200, 200);
           
        } catch (Exception ex) {
-          gui_.logs().showError("Problem acquiring focus curve");
+          ReportingUtils.showError("Problem acquiring focus curve");
        } finally {
           setCursor(Cursor.getDefaultCursor());
        }

@@ -25,7 +25,6 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import org.micromanager.PropertyMap;
-import org.micromanager.PropertyMaps;
 import org.micromanager.Studio;
 import org.micromanager.quickaccess.WidgetPlugin;
 import org.scijava.plugin.Plugin;
@@ -81,6 +80,7 @@ public final class TextLabel extends WidgetPlugin implements SciJavaPlugin {
          // Not a valid text label.
          return null;
       }
-      return PropertyMaps.builder().putString("labelText", text).build();
+      return studio_.data().getPropertyMapBuilder()
+         .putString("labelText", text).build();
    }
 }

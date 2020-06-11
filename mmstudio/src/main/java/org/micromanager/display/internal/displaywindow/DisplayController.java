@@ -817,24 +817,20 @@ public final class DisplayController extends DisplayWindowAPIAdapter
    // From the datastore
    @Subscribe
    public void onNewImage(final DataProviderHasNewImageEvent event) {
-      // (NS - 2020-03-27)
-      // Hack: handle only if the circular buffer is not too full.  How full is highly arbitrary.
-      if ( !studio_.acquisitions().isAcquisitionRunning() || !studio_.core().isSequenceRunning() ||
-              studio_.core().getRemainingImageCount() < 6 ) {
-         perfMon_.sampleTimeInterval("NewImageEvent");
-         synchronized (this) {
-            if (closeCompleted_) {
-               return;
-            }
-         }
+      perfMon_.sampleTimeInterval("NewImageEvent");
 
-         // Generally we want to display new images (if not instructed otherwise
-         // by the user), but we let the animation controller coordinate that with
-         // any ongoing playback animation. Actual display of new images happens
-         // upon receiving callbacks via the AnimationController.Listener
-         // interface.
-         animationController_.newDataPosition(event.getImage().getCoords());
+      synchronized (this) {
+         if (closeCompleted_) {
+            return;
+         }
       }
+
+      // Generally we want to display new images (if not instructed otherwise
+      // by the user), but we let the animation controller coordinate that with
+      // any ongoing playback animation. Actual display of new images happens
+      // upon receiving callbacks via the AnimationController.Listener
+      // interface.
+      animationController_.newDataPosition(event.getImage().getCoords());
    }
 
 
@@ -967,7 +963,6 @@ public final class DisplayController extends DisplayWindowAPIAdapter
    }
 
    @Override
-   @Deprecated
    public ImagePlus getImagePlus() {
       if (!SwingUtilities.isEventDispatchThread()) {
          RunnableFuture<ImagePlus> edtFuture = new FutureTask(
@@ -1082,7 +1077,6 @@ public final class DisplayController extends DisplayWindowAPIAdapter
    }
 
    @Override
-   @Deprecated
    public void toggleFullScreen() {
       throw new UnsupportedOperationException();
    }

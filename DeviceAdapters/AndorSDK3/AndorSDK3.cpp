@@ -41,14 +41,15 @@
 #include "BooleanPropertyWithPoiseControl.h"
 #include "ExposureProperty.h"
 
+#ifdef _WINDOWS
+#include "atunpacker.h"
+#else
 #include "atutility.h"
+#endif
 #include "triggerremapper.h"
 #include "AndorSDK3Strings.h"
 #include "EventsManager.h"
 #include "CallBackManager.h"
-
-#include "../Andor/SRRFControl.h"
-#include "SRRFAndorSDK3Camera.h"
 
 
 using namespace std;
@@ -81,7 +82,6 @@ static const unsigned int CID_FIELD_SIZE = 4;
 static const unsigned int NUMBER_MDA_BUFFERS = 10;
 static const unsigned int NUMBER_LIVE_BUFFERS = 2;
 
-static const int ANDORSDK3_SRRF_ACQUISITION_STOPPED = 200;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -156,9 +156,7 @@ CAndorSDK3Camera::CAndorSDK3Camera()
   numImgBuffersAllocated_(0),
   currentSeqExposure_(0),
   keep_trying_(false),
-  stopOnOverflow_(false),
-  SRRFControl_(nullptr),
-  SRRFCamera_(nullptr)
+  stopOnOverflow_(false)
 {
    // call the base class method to set-up default error codes/messages
    InitializeDefaultErrorMessages();
@@ -166,12 +164,10 @@ CAndorSDK3Camera::CAndorSDK3Camera()
    SetErrorText(DEVICE_BUFFER_OVERFLOW, " Circular Buffer Overflow code from MMCore");
    SetErrorText(DEVICE_OUT_OF_MEMORY, " Allocation Failure - out of memory");
    SetErrorText(DEVICE_SNAP_IMAGE_FAILED, " Snap Image Failure");
-   SetErrorText(ANDORSDK3_SRRF_ACQUISITION_STOPPED, "Acquisition stopped or suspended");
-   SetErrorText(AT_ERR_HARDWARE_OVERFLOW, "Camera buffer overflow (with the current acquisition settings the camera acquires frames faster than the computer can handle)");
+   
 #ifdef TESTRESOURCELOCKING
    pDemoResourceLock_ = new MMThreadLock();
 #endif
-   SRRFImage_ = new ImgBuffer();
    thd_ = new MySequenceThread(this);
 
    // Create an atcore++ device manager
@@ -198,7 +194,6 @@ CAndorSDK3Camera::CAndorSDK3Camera()
 CAndorSDK3Camera::~CAndorSDK3Camera()
 {
    StopSequenceAcquisition();
-   delete SRRFImage_;
    delete thd_;
 #ifdef TESTRESOURCELOCKING
    delete pDemoResourceLock_;
@@ -503,7 +498,9 @@ int CAndorSDK3Camera::Initialize()
       bufferControl = cameraDevice->GetBufferControl();
       startAcquisitionCommand = cameraDevice->GetCommand(L"AcquisitionStart");
       sendSoftwareTrigger = cameraDevice->GetCommand(L"SoftwareTrigger");
+#ifdef linux
       AT_InitialiseUtilityLibrary();
+#endif
    }
    else
    {
@@ -777,18 +774,6 @@ int CAndorSDK3Camera::Initialize()
    DDGStepWidthMode_property = new TEnumProperty(TAndorSDK3Strings::DDG_STEP_WIDTH_MODE, cameraDevice->GetEnum(L"DDGStepWidthMode"),
                                             this, thd_, snapShotController_, false, true);
 
-   // SRRF (for Sona only) 
-   if (0 == s_cameraName.compare(0, 4, "Sona"))
-   {
-      SRRFCamera_ = new SRRFAndorSDK3Camera(this);
-      if (SRRFCamera_) {
-         SRRFControl_ = new SRRFControl(SRRFCamera_);
-         if (SRRFControl_->GetLibraryStatus() != SRRFControl::READY) {
-            LogMessage(SRRFControl_->GetLastErrorString());
-         }
-      }
-   }
-
    char errorStr[MM::MaxStrLength];
    if (false == eventsManager_->Initialise(errorStr) )
    {
@@ -814,19 +799,6 @@ int CAndorSDK3Camera::Initialize()
       return DEVICE_ERR;
    }
    
-   return DEVICE_OK;
-}
-
-int CAndorSDK3Camera::AddProperty(const char* name, const char* value, MM::PropertyType eType, bool readOnly, MM::ActionFunctor* pAct)
-{
-   if(!HasProperty(name))
-   {
-      CreateProperty(name, value, eType, readOnly, pAct);
-   }
-   else
-   {
-      SetProperty(name, value);
-   }
    return DEVICE_OK;
 }
 
@@ -856,8 +828,6 @@ int CAndorSDK3Camera::Shutdown()
          LogMessage(s);
          retCode = DEVICE_ERR;
       }
-      delete SRRFControl_;
-      delete SRRFCamera_;
       delete binning_property;
       delete preAmpGain_property;
       delete electronicShutteringMode_property;
@@ -927,7 +897,9 @@ int CAndorSDK3Camera::Shutdown()
       cameraDevice->ReleaseBufferControl(bufferControl);
       cameraDevice->Release(startAcquisitionCommand);
       cameraDevice->Release(sendSoftwareTrigger);
+#ifdef linux
       AT_FinaliseUtilityLibrary();
+#endif
       deviceManager->CloseDevice(cameraDevice);
       DEVICE_IN_USE[deviceInUseIndex_] = false;
    }
@@ -946,9 +918,14 @@ void CAndorSDK3Camera::UnpackDataWithPadding(unsigned char * _pucSrcBuffer)
    }
    
    MMThreadGuard g(imgPixelsLock_);
-   unsigned char * pucDstData = img_.GetPixelsRW();
+   unsigned char * pucDstData = const_cast<unsigned char *>(img_.GetPixels());
+#ifdef _WINDOWS
+   unsigned int ret_code = AT_UnpackBuffer(_pucSrcBuffer, pucDstData, aoi_property_->GetWidth(), aoi_property_->GetHeight(), 
+                                          aoi_property_->GetStride(), ws_pixelEncoding.c_str(), L"Mono16", 0);
+#else
    unsigned int ret_code = AT_ConvertBuffer(_pucSrcBuffer, pucDstData, aoi_property_->GetWidth(), aoi_property_->GetHeight(), 
                                           aoi_property_->GetStride(), ws_pixelEncoding.c_str(), L"Mono16");
+#endif                                          
    if (AT_SUCCESS != ret_code)
    {
       stringstream ss;
@@ -966,96 +943,11 @@ void CAndorSDK3Camera::UnpackDataWithPadding(unsigned char * _pucSrcBuffer)
 */
 int CAndorSDK3Camera::SnapImage()
 {
-   int ret = DEVICE_OK;
-   if (IsSRRFEnabled())
-   {
-      // Leave poise
-      try {
-         if (snapShotController_->isPoised() )
-         {
-            snapShotController_->leavePoisedMode();
-         }
-      }
-      catch (ComException & e) {
-         string s("[SnapImage] ComException thrown: ");
-         s += e.what();
-         LogMessage(s);
-      } 
-      if (IsCapturing())
-      {
-         ret = DEVICE_CAMERA_BUSY_ACQUIRING;
-      }
-      else
-      {
-         // Initialise the SRRF library
-         ret = SRRFControl_->ApplySRRFParameters(&img_, false);
-         if (AT_SRRF_SUCCESS != ret)
-         {
-            return DEVICE_SNAP_IMAGE_FAILED;
-         }
-
-         // Prepare the camera for the acquisition of SRRF
-         if (DEVICE_OK == ret)
-         {
-            ret = SetupCameraForSeqAcquisition(SRRFControl_->GetFrameBurst());
-         }
-         if (DEVICE_OK == ret)
-         {
-            ret = CameraStart();
-         }
-
-         // Acquire SRRF images
-         if (DEVICE_OK == ret)
-         {
-            keep_trying_ = true;
-            thd_->Resume(); // Simply ensure the suspend flag is set to false
-            ret = AcquireSRRFImage(false, 0);
-         }
-
-         // Repoise the camera
-         snapShotController_->resetCameraAcquiring();
-         CleanUpDeviceCircularBuffer();
-         snapShotController_->poiseForSnapShot();
-      }
-   }
-   else
-   {
-      ret = (snapShotController_->takeSnapShot() ? DEVICE_OK : DEVICE_SNAP_IMAGE_FAILED);
-   }
+   int ret = (snapShotController_->takeSnapShot() ? DEVICE_OK : DEVICE_SNAP_IMAGE_FAILED);
 
    return ret;
 }
 
-int CAndorSDK3Camera::AcquireSRRFImage(bool insertImage, long imageCounter)
-{
-   int ret = DEVICE_OK;
-   AT_SRRF_U16 numberFramesPerBurst = SRRFControl_->GetFrameBurst();
-   for (int frameIndex = 0; frameIndex < numberFramesPerBurst; ++frameIndex)
-   {
-      ret = AcquireFrameInSequence(0 == frameIndex && 0 == imageCounter);
-      if (DEVICE_OK != ret)
-      {
-         break;
-      }
-
-      if (0 == frameIndex)
-      {
-         startSRRFImageTime_ = timeStamp_;
-         if (0 == imageCounter)
-         {
-            startSRRFSequenceTime_ = startSRRFImageTime_;
-         }
-      }
-      MMThreadGuard g(imgPixelsLock_);
-      SRRFControl_->ProcessSingleFrameOnCPU(img_.GetPixelsRW(), img_.Width() * img_.Height() * img_.Depth()); 
-   }
-
-   if (insertImage && DEVICE_OK == ret)
-   {
-      ret = InsertImageWithSRRF();
-   }
-   return ret;
-}
 
 /**
 * Returns pixel data.
@@ -1069,11 +961,6 @@ int CAndorSDK3Camera::AcquireSRRFImage(bool insertImage, long imageCounter)
 */
 const unsigned char * CAndorSDK3Camera::GetImageBuffer()
 {
-   if (IsSRRFEnabled())
-   {
-      return GetImageBufferSRRF();
-   }
-   
    unsigned char * return_buffer = NULL;
 
    snapShotController_->getData(return_buffer);
@@ -1089,26 +976,13 @@ const unsigned char * CAndorSDK3Camera::GetImageBuffer()
    return img_.GetPixels();
 }
 
-const unsigned char* CAndorSDK3Camera::GetImageBufferSRRF() 
-{
-   AT_SRRF_U64 outputBufferSize = GetImageBufferSize();
-   MMThreadGuard g(imgPixelsLock_);
-   SRRFControl_->GetSRRFResult(SRRFImage_->GetPixelsRW(), outputBufferSize);
-   return SRRFImage_->GetPixels();
-}
-
-bool CAndorSDK3Camera::IsSRRFEnabled() const
-{
-   return SRRFControl_ && SRRFControl_->GetSRRFEnabled();
-}
-
 /**
 * Returns image buffer X-size in pixels.
 * Required by the MM::Camera API.
 */
 unsigned CAndorSDK3Camera::GetImageWidth() const
 {
-   return IsSRRFEnabled() ? SRRFImage_->Width() : static_cast<unsigned>(aoi_property_->GetWidth());
+   return static_cast<unsigned>(aoi_property_->GetWidth());
 }
 
 /**
@@ -1117,7 +991,7 @@ unsigned CAndorSDK3Camera::GetImageWidth() const
 */
 unsigned CAndorSDK3Camera::GetImageHeight() const
 {
-   return IsSRRFEnabled() ? SRRFImage_->Height() : static_cast<unsigned>(aoi_property_->GetHeight());
+   return static_cast<unsigned>(aoi_property_->GetHeight());
 }
 
 /**
@@ -1153,9 +1027,7 @@ unsigned CAndorSDK3Camera::GetBitDepth() const
 */
 long CAndorSDK3Camera::GetImageBufferSize() const
 {
-   return IsSRRFEnabled() ? 
-      SRRFImage_->Width() * SRRFImage_->Height() * SRRFImage_->Depth() :
-      img_.Width() * img_.Height() * img_.Depth();
+   return img_.Width() * img_.Height() * img_.Depth();
 }
 
 
@@ -1163,32 +1035,20 @@ int CAndorSDK3Camera::ResizeImageBuffer()
 {
    if (initialized_)
    {
-      unsigned int AOIWidth = static_cast<unsigned>(aoi_property_->GetWidth());
-      unsigned int AOIHeight = static_cast<unsigned>(aoi_property_->GetHeight());
       if (GetImageBytesPerPixel() == img_.Depth() )
       {
          //This memsets the new size to 0 - if any issues occur,
          // a blank image will be shown as opposed to corrupt image.
-         img_.Resize(AOIWidth, AOIHeight );
+         img_.Resize(GetImageWidth(), GetImageHeight() );
       }
       else
       {
-         img_.Resize(AOIWidth, AOIHeight, GetImageBytesPerPixel() );
-      }
-
-      if (SRRFControl_)
-      {
-         unsigned int radiality = SRRFControl_->GetRadiality();
-         ResizeSRRFImage(radiality);
+         img_.Resize(GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel() );
       }
    }
    return DEVICE_OK;
 }
 
-void CAndorSDK3Camera::ResizeSRRFImage(long radiality)
-{
-   SRRFImage_->Resize(img_.Width()*radiality, img_.Height()*radiality, img_.Depth());
-}
 
 /**
 * Sets the camera Region Of Interest.
@@ -1484,19 +1344,7 @@ int CAndorSDK3Camera::StartSequenceAcquisition(long numImages, double interval_m
    if (DEVICE_OK == retCode)
    {
       aoi_property_->SetReadOnly(true);
-      long numberOfFramesToAcquire = numImages;
-      if (IsSRRFEnabled())
-      {
-         // Initialise the SRRF library
-         bool kineticSeries = LONG_MAX != numImages;
-         retCode = SRRFControl_->ApplySRRFParameters(&img_, !kineticSeries);
-         if (AT_SRRF_SUCCESS != retCode)
-         {
-            return DEVICE_ERR;
-         }
-		   numberOfFramesToAcquire *= kineticSeries ? SRRFControl_->GetFrameBurst() : 1;
-      }
-      retCode = SetupCameraForSeqAcquisition(numberOfFramesToAcquire);
+      retCode = SetupCameraForSeqAcquisition(numImages);
    }
 
    if (DEVICE_OK == retCode)
@@ -1568,8 +1416,8 @@ AT_64 CAndorSDK3Camera::GetTimeStamp(unsigned char* pBuf)
       puc_metadata -= (featureSize-CID_FIELD_SIZE);
 
       if (CID_FPGA_TICKS == cid) {
-         i64_timestamp = *(reinterpret_cast<AT_64*>(puc_metadata));
-         foundTimestamp = true;
+        i64_timestamp = *(reinterpret_cast<AT_64*>(puc_metadata));
+        foundTimestamp = true;
       }
    }
    while(!foundTimestamp && puc_metadata > pBuf);
@@ -1611,37 +1459,11 @@ int CAndorSDK3Camera::InsertImage()
    md.SetTag(mst);
 
    MMThreadGuard g(imgPixelsLock_);
-   return InsertMMImage(img_, md);
-}
 
-int CAndorSDK3Camera::InsertImageWithSRRF()
-{
-   char deviceName[MM::MaxStrLength];
-   GetProperty(MM::g_Keyword_CameraName, deviceName);
-
-   Metadata md;
-
-   stringstream ss;
-   double frameTimeInS = (startSRRFImageTime_ - startSRRFSequenceTime_) / static_cast<double>(fpgaTSclockFrequency_);
-   ss << frameTimeInS * 1000;
-   MetadataSingleTag mstSRRFFrameTime(SRRFControl_->GetSRRFFrameTimeMetadataName(), deviceName, true);
-   mstSRRFFrameTime.SetValue(ss.str().c_str());
-   md.SetTag(mstSRRFFrameTime);
-
-   MMThreadGuard g(imgPixelsLock_);
-
-   AT_SRRF_U64 outputBufferSize = GetImageBufferSize();
-   SRRFControl_->GetSRRFResult(SRRFImage_->GetPixelsRW(), outputBufferSize);
-
-   return InsertMMImage(*SRRFImage_, md);
-}
-
-int CAndorSDK3Camera::InsertMMImage(const ImgBuffer& image, const Metadata& md)
-{
-   const unsigned char * pData = image.GetPixels();
-   unsigned int w = image.Width();
-   unsigned int h = image.Height();
-   unsigned int b = image.Depth();
+   const unsigned char * pData = img_.GetPixels();
+   unsigned int w = img_.Width();
+   unsigned int h = img_.Height();
+   unsigned int b = img_.Depth();
 
    int ret = GetCoreCallback()->InsertImage(this, pData, w, h, b, md.Serialize().c_str());
    if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
@@ -1671,7 +1493,7 @@ int CAndorSDK3Camera::checkForBufferOverflow()
    return ret;
 }
 
-bool CAndorSDK3Camera::waitForData(unsigned char *& return_buffer, int & buffer_size, bool is_first_frame)
+bool CAndorSDK3Camera::waitForData(unsigned char *& return_buffer, int & buffer_size)
 {
    bool got_image = false;
    bool endExpEventFired = false;
@@ -1689,7 +1511,7 @@ bool CAndorSDK3Camera::waitForData(unsigned char *& return_buffer, int & buffer_
 
    //else just wait on frame (1st trigger sent at Acq start)
    int timeout_ms = currentSeqExposure_ + SnapShotControl::WAIT_DATA_TIMEOUT_BUFFER_MILLISECONDS;
-   if (snapShotController_->isExternal() && is_first_frame)
+   if (snapShotController_->isExternal() && 0 == thd_->GetImageCounter())
    {
      long extTrigTimeoutValue = 0;
      GetProperty(g_Keyword_ExtTrigTimeout, extTrigTimeoutValue);
@@ -1711,11 +1533,6 @@ bool CAndorSDK3Camera::waitForData(unsigned char *& return_buffer, int & buffer_
  */
 int CAndorSDK3Camera::ThreadRun(void)
 {
-   return AcquireFrameInSequence(true);
-}
-
-int CAndorSDK3Camera::AcquireFrameInSequence(bool isFirstFrame)
-{
    int ret = DEVICE_ERR;
    unsigned char * return_buffer = NULL;
    int buffer_size = 0;
@@ -1725,22 +1542,22 @@ int CAndorSDK3Camera::AcquireFrameInSequence(bool isFirstFrame)
    {
       try
       {
-         got_image = waitForData(return_buffer, buffer_size, isFirstFrame);
+         got_image = waitForData(return_buffer, buffer_size);
       }
       catch (exception & e)
       {
-         string s("[AcquireFrameInSequence] Exception caught with Message: ");
+         string s("[ThreadRun] Exception caught with Message: ");
          s += e.what();
          LogMessage(s);
       }
       catch (...)
       {
-         LogMessage("[AcquireFrameInSequence] Unrecognised Exception caught!");
+         LogMessage("[ThreadRun] Unrecognised Exception caught!");
       }
 
       if (!got_image)
       {
-         LogMessage("[AcquireFrameInSequence] WaitBuffer returned false, no data!");
+         LogMessage("[ThreadRun] WaitBuffer returned false, no data!");
          ret = checkForBufferOverflow();
          if (AT_ERR_HARDWARE_OVERFLOW == ret)
          {
@@ -1753,26 +1570,13 @@ int CAndorSDK3Camera::AcquireFrameInSequence(bool isFirstFrame)
    {
       timeStamp_ = GetTimeStamp(return_buffer);
       UnpackDataWithPadding(return_buffer);
-      if (!IsSRRFEnabled())
-      {
-         ret = InsertImage();
-      }
-      else 
-      {
-         ret = DEVICE_OK;
-      }
-      bufferControl->Queue(return_buffer, buffer_size);
+      ret = InsertImage();
+	  bufferControl->Queue(return_buffer, buffer_size);
    }
 
    if (thd_->IsSuspended() )
    {
       ret = DEVICE_OK;
-   }
-
-   if (IsSRRFEnabled() && !got_image && DEVICE_OK == ret)
-   {
-      // Make sure to return an error when no image is acquired
-      ret = ANDORSDK3_SRRF_ACQUISITION_STOPPED;
    }
    return ret;
 };
@@ -1876,16 +1680,7 @@ int MySequenceThread::svc(void) throw()
    {
       do
       {
-         if (camera_->IsSRRFEnabled())
-         {
-            ret = camera_->AcquireSRRFImage(true, imageCounter_);
-            // Ignore the fact that we haven't acquired any image because the acquisition was suspended
-            if (ANDORSDK3_SRRF_ACQUISITION_STOPPED == ret) ret = DEVICE_OK;
-         }
-         else
-         {
-            ret = camera_->AcquireFrameInSequence(0 == imageCounter_);
-         }
+         ret = camera_->ThreadRun();
       } 
       while (DEVICE_OK == ret && !IsStopped() && imageCounter_++ < numImages_ - 1);
 

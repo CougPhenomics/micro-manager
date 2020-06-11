@@ -34,7 +34,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import net.miginfocom.swing.MigLayout;
 import org.micromanager.PropertyMap;
-import org.micromanager.PropertyMaps;
 import org.micromanager.Studio;
 import org.micromanager.events.AutoShutterEvent;
 import org.micromanager.events.GUIRefreshEvent;
@@ -198,7 +197,7 @@ public final class ShutterControl extends WidgetPlugin implements SciJavaPlugin 
 
    @Override
    public PropertyMap configureControl(Frame parent) {
-      return PropertyMaps.builder().build();
+      return studio_.data().getPropertyMapBuilder().build();
    }
 
    /**

@@ -50,8 +50,7 @@ public class MMStudioPlugin implements PlugIn, CommandListener {
     * @param arg the plugin argument (not used)
     */
    @Override
-   public void run(final String arg) {   
-      final String profileNameAutoStart = parseMacroOptions(); //This must be run from the same thread that the plugin is started in or Macro.getOptions will return null.
+   public void run(final String arg) {      
       SwingUtilities.invokeLater(new Runnable() {
          @Override
          public void run() {
@@ -78,6 +77,7 @@ public class MMStudioPlugin implements PlugIn, CommandListener {
                      Executer.addCommandListener(MMStudioPlugin.this);
                   }
 
+                  String profileNameAutoStart = parseMacroOptions();
                   studio_ = new MMStudio(true, profileNameAutoStart);
                }
             } catch (RuntimeException e) {
@@ -89,7 +89,7 @@ public class MMStudioPlugin implements PlugIn, CommandListener {
       });
    }
 
-    private static String parseMacroOptions() {
+    private String parseMacroOptions() {
         //This method parses the optional ImageJ macro options. Currently it only supports the specification of a profile to automatically load like so: run("Micro-Manager Studio", "-profile {MyProfileNameHere}");
         //This method could be expanded to support other startup arguments in the future.
         String optionalArgs = Macro.getOptions(); //If, in ImageJ you start this plugin as `run("Micro-Manager Studio", "-profile MyProfile")` then this line will return "-profile MyProfile"

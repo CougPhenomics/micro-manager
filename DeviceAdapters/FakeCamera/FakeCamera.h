@@ -28,7 +28,6 @@
 #include "DeviceBase.h"
 
 #ifdef __linux__
-// This include has been added for compile on Ubuntu 18.04 and newer.
 #include <opencv/cv.hpp>
 #else
 #include "opencv/highgui.h"

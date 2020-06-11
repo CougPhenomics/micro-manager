@@ -41,11 +41,6 @@ public:
       std::cout << std:: endl; 
    }
 
-   virtual void onChannelGroupChanged(const char* newChannelGroupName)
-   {
-      std::cout << "onChannelGroupChanged() " << newChannelGroupName << std::endl;
-   }
-
    virtual void onConfigGroupChanged(const char* groupName, const char* newConfigName)
    {
       std::cout << "onConfigGroupChanged() " << groupName << " " << newConfigName;

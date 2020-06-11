@@ -30,7 +30,6 @@ import java.awt.Graphics2D;
 import java.awt.MenuBar;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.geom.Rectangle2D;
@@ -343,7 +342,7 @@ public final class ImageJBridge {
       // set the TZC coordinates, we need this:
       int channel = coords.hasAxis(Coords.CHANNEL) ? coords.getChannel() : 0;
       int slice = coords.hasAxis(Coords.Z) ? coords.getZ() : 0;
-      int timepoint = coords.hasAxis(Coords.T) ? coords.getT() : 0;
+      int timepoint = coords.hasAxis(Coords.TIME) ? coords.getTime() : 0;
       imagePlus_.updatePosition(channel + 1, slice + 1, timepoint + 1);
 
       // The way to get ImagePlus to repaint even when the position hasn't
@@ -499,14 +498,14 @@ public final class ImageJBridge {
          return new DefaultCoords.Builder().build();
       }
 
-      Coords.CoordsBuilder cb = position.copyBuilder();
+      Coords.CoordsBuilder cb = position.copy();
       if (uiController_.isAxisDisplayed(Coords.CHANNEL)) {
          cb.channel(channel);
       }
       if (uiController_.isAxisDisplayed(Coords.Z)) {
          cb.z(zSlice);
       }
-      if (uiController_.isAxisDisplayed(Coords.T)) {
+      if (uiController_.isAxisDisplayed(Coords.TIME)) {
          cb.time(timePoint);
       }
       return cb.build();
@@ -515,7 +514,7 @@ public final class ImageJBridge {
    int getIJFlatIndexForMMCoords(Coords coords) {
       int channel = Math.max(0, coords.getChannel());
       int zSlice = Math.max(0, coords.getZ());
-      int timePoint = Math.max(0, coords.getT());
+      int timePoint = Math.max(0, coords.getTime());
       int nChannels = getMMNumberOfChannels();
       int nZSlices = getMMNumberOfZSlices();
       int nTimePoints = getMMNumberOfTimePoints();
@@ -915,10 +914,6 @@ public final class ImageJBridge {
       }
 
       uiController_.selectionMayHaveChanged(makeBoundsAndMaskFromIJRoi(roi));
-   }
-
-   boolean ij2mmKeyPressConsumed(KeyEvent e) {
-      return uiController_.keyPressOnImageConsumed(e);
    }
    
    void ij2mmMouseClicked(MouseEvent e) {

@@ -6,12 +6,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.geom.Point2D;
-import java.awt.Dimension;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.geom.AffineTransform;
 import java.io.File;
 
 import javax.swing.JButton;
@@ -22,27 +16,31 @@ import javax.swing.JPanel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
-import javax.swing.ButtonGroup;
-import javax.swing.border.LineBorder;
-
-import net.miginfocom.swing.MigLayout;
 
 import org.micromanager.MenuPlugin;
 import org.micromanager.MultiStagePosition;
 import org.micromanager.PositionList;
 import org.micromanager.Studio;
 import org.micromanager.StagePosition;
+import org.micromanager.internal.utils.MMFrame;
+import org.micromanager.internal.utils.TextUtils;
+
+import javax.swing.border.LineBorder;
+
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.geom.AffineTransform;
+
+import net.miginfocom.swing.MigLayout;
 
 import mmcorej.CMMCore;
 
-// Imports for MMStudio internal packages
-// Plugins should not access internal packages, to ensure modularity and
-// maintainability. However, this plugin code is older than the current
-// MMStudio API, so it still uses internal classes and interfaces. New code
-// should not imitate this practice.
+import javax.swing.ButtonGroup;
+
+import java.awt.Dimension;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import org.micromanager.internal.utils.NumberUtils;
-import org.micromanager.internal.utils.MMFrame;
-import org.micromanager.internal.utils.TextUtils;
 
 /**
  * This is the primary user interface for the plugin.
@@ -274,7 +272,7 @@ public class SiteGenerator extends MMFrame implements ParentPlateGUI {
       JButton customButton = new JButton("Create Custom");
       sidebar.add(customButton, "growx");
       customButton.addActionListener((ActionEvent e) -> {
-         CustomSettingsFrame csf = new CustomSettingsFrame(app_, SiteGenerator.this);         
+         CustomSettingsFrame csf = new CustomSettingsFrame(SiteGenerator.this);         
          csf.setVisible(true);
       });
 

@@ -103,17 +103,10 @@ using namespace std;
  * This applies to all classes exposed through the SWIG layer (i.e. the whole
  * of the public API of the Core), not just CMMCore.
  *
- * Because currently there is no C++ DLL build of MMCore, what we care about is
- * the backward compatibility of the Java and Python bindings. So a change that
- * requires recompilation (without source changes) of (hypothetical) C++ code
- * calling MMCore does not, by itself, require incrementing the major version,
- * provided that the resulting MMCoreJ.jar can be dropped in without
- * recompilation of client Java code.
- *
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 10, MMCore_versionMinor = 1, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 10, MMCore_versionMinor = 0, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3405,12 +3398,6 @@ void CMMCore::setGalvoDevice(const char* galvoLabel) throw (CMMError)
  */
 void CMMCore::setChannelGroup(const char* chGroup) throw (CMMError)
 {
-   // Don't do anything if the new channelgroup is the same as the old one
-   if (channelGroup_.compare(chGroup) == 0)
-   {
-      return;
-   }
-
    if (chGroup && strlen(chGroup)>0)
    {
       channelGroup_ = chGroup;
@@ -3425,10 +3412,6 @@ void CMMCore::setChannelGroup(const char* chGroup) throw (CMMError)
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreChannelGroup, newChGroup.c_str()));
-   }
-   if (externalCallback_ != 0) 
-   {
-      externalCallback_->onChannelGroupChanged(newChGroup.c_str());
    }
 }
 

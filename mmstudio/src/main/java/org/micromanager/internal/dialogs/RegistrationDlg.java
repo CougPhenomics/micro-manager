@@ -49,7 +49,6 @@ import org.micromanager.Studio;
 import org.micromanager.UserProfile;
 import org.micromanager.internal.utils.ReportingUtils;
 import org.micromanager.profile.internal.LegacyMM1Preferences;
-import org.micromanager.propertymap.MutablePropertyMapView;
 
 // TODO: the change to the Profile system (away from Preferences) has caused
 // registration state to be lost.
@@ -159,9 +158,11 @@ public final class RegistrationDlg extends JDialog {
                InputStream is;
                BufferedReader br;
                // save registration information to profile
-               MutablePropertyMapView settings = studio_.profile().getSettings(RegistrationDlg.class);
-               settings.putString(REGISTRATION_NAME, name_.getText());
-               settings.putString(REGISTRATION_INST, inst_.getText());
+               UserProfile profile = studio_.profile();
+               profile.setString(RegistrationDlg.class, REGISTRATION_NAME,
+                       name_.getText());
+               profile.setString(RegistrationDlg.class, REGISTRATION_INST,
+                       inst_.getText());
                // replace special characters to properly format the command string
                String name1 = name_.getText().replaceAll("[ \t]", "%20");
                name1 = name1.replaceAll("[&]", "%20and%20");
@@ -235,18 +236,18 @@ public final class RegistrationDlg extends JDialog {
    }
 
    private int incrementRegistrationAttempts() {
-      MutablePropertyMapView settings = studio_.profile().
-              getSettings(RegistrationDlg.class);
+      UserProfile profile = studio_.profile();
       int attempts = getNumRegistrationAttempts(studio_) + 1;
-      settings.putInteger(REGISTRATION_ATTEMPTS, attempts);
+      profile.setInt(RegistrationDlg.class, REGISTRATION_ATTEMPTS, attempts);
       return attempts;
    }
 
    public static boolean getHaveRegistered(Studio studio) {
       // HACK: if there's no entry, we also check the 1.4 Preferences.
-      MutablePropertyMapView settings = studio.profile().getSettings(RegistrationDlg.class);
-      if (settings.containsBoolean(HAVE_REGISTERED)) {
-         return settings.getBoolean(HAVE_REGISTERED, false);
+      Boolean result = studio.profile().getBoolean(
+            RegistrationDlg.class, HAVE_REGISTERED, null);
+      if (result != null) {
+         return result;
       }
       Preferences user = LegacyMM1Preferences.getUserRoot();
       Preferences system = LegacyMM1Preferences.getSystemRoot();

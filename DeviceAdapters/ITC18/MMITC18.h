@@ -25,8 +25,6 @@
 #include <string>
 #include <map>
 #include <fstream>
-#include <sstream>
-#include <vector>
 
 
 #define ERR_USB_ERROR 			101
@@ -106,10 +104,6 @@ public:
     int OnImages(MM::PropertyBase* pPropt, MM::ActionType eAct);
     int OnFrames(MM::PropertyBase* pPropt, MM::ActionType eAct);
     int OnSlices(MM::PropertyBase* pPropt, MM::ActionType eAct);    
-    int OnStepSizeUm(MM::PropertyBase* pPropt, MM::ActionType eAct);
-    int OnStepTimeMs(MM::PropertyBase* pPropt, MM::ActionType eAct);
-    int OnStepLowerLimitUm(MM::PropertyBase* pPropt, MM::ActionType eAct);
-    int OnStepUpperLimitUm(MM::PropertyBase* pPropt, MM::ActionType eAct);
     int OnChannels(MM::PropertyBase* pPropt, MM::ActionType eAct);
     int OnTime(MM::PropertyBase* pPropt, MM::ActionType eAct);
 
@@ -131,11 +125,6 @@ private:
     long images_;;
     long minTime_;
     long maxTime_;
-    
-    float zStep_um_;
-    float zStep_ms_;
-    float zStep_ll_um_;
-    float zStep_ul_um_;
 
     std::string name_;
     bool initialized_;

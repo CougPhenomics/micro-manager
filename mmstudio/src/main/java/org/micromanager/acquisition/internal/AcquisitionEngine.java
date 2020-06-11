@@ -25,7 +25,7 @@ package org.micromanager.acquisition.internal;
 import java.awt.Color;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import mmcorej.org.json.JSONObject;
+import org.json.JSONObject;
 import org.micromanager.PositionList;
 import org.micromanager.Studio;
 import org.micromanager.acquisition.ChannelSpec;

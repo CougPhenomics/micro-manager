@@ -74,7 +74,7 @@ class ZGeneratorShepard implements ZGenerator {
            sp = msp.get(a); //get an axis
            if (sp.is1DStagePosition()){
               for (int p=0; p<nPositions; p++){
-                  z[p] = positionList.getPosition(p).get(a).get1DPosition();
+                  z[p] = positionList.getPosition(p).get(a).x;                
               }              
               interpolators_.put(sp.getStageDeviceLabel(), 
                       new ShepardInterpolator(x, y, z, exp)); //store the interpolator for this axis

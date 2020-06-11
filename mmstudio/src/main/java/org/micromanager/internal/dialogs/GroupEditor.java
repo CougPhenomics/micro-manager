@@ -27,6 +27,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import mmcorej.CMMCore;
 import mmcorej.Configuration;
 import mmcorej.DeviceType;
 import mmcorej.PropertyType;
@@ -44,8 +45,8 @@ public final class GroupEditor extends ConfigDialog {
    private static final long serialVersionUID = 8281144157746745260L;
    private static final String DISPLAY_SHUTTER_WARNING = "Warn user before saving a config group that includes shutter state.";
 
-   public GroupEditor(String groupName, String presetName, Studio studio, boolean newItem) {
-      super(groupName, presetName, studio, newItem);
+   public GroupEditor(String groupName, String presetName, Studio studio, CMMCore core, boolean newItem) {
+      super(groupName, presetName, studio, core, newItem);
       instructionsText_ = "Specify properties in this configuration group:";
       nameFieldLabelText_ = "Group name:";
       initName_ = groupName_;
@@ -92,8 +93,8 @@ public final class GroupEditor extends ConfigDialog {
          }
       }
       // Warn user about including shutter state in config groups.
-      if (shutters.size() > 0 && studio_.profile().getSettings(GroupEditor.class).
-              getBoolean(DISPLAY_SHUTTER_WARNING, true)) {
+      if (shutters.size() > 0 && studio_.profile().getBoolean(
+               GroupEditor.class, DISPLAY_SHUTTER_WARNING, true)) {
          JPanel contents = new JPanel(new MigLayout("fill, flowy"));
          // NB I would prefer to use a JTextArea here, and use its automatic
          // line wrapping, but that causes a NullPointerException when laying
@@ -118,8 +119,8 @@ public final class GroupEditor extends ConfigDialog {
                contents, "Shutter State in Config Group",
                JOptionPane.WARNING_MESSAGE, 0, null,
                buttons, buttons[0]);
-         studio_.profile().getSettings(GroupEditor.class).putBoolean(
-                 DISPLAY_SHUTTER_WARNING, !neverAgain.isSelected());
+         studio_.profile().setBoolean(GroupEditor.class, DISPLAY_SHUTTER_WARNING,
+               !neverAgain.isSelected());
          if (selection == 2) {
             // User cancelled.
             return;
@@ -257,7 +258,7 @@ public final class GroupEditor extends ConfigDialog {
          }
          // Make the first preset.
          if (itemsIncludedCount > 1) {
-            new PresetEditor(newName, "NewPreset", studio_, false);
+            new PresetEditor(newName, "NewPreset", studio_, core_, false);
          }
       } else {// An existing configuration group is being modified.
          // Apply configuration settings to all properties in the group.

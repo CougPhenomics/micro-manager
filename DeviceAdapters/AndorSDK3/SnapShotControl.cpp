@@ -8,8 +8,8 @@ using namespace andor;
 using namespace std;
 
 
-SnapShotControl::SnapShotControl(IDevice * _cameraDevice, CEventsManager* _evMngr)
-:  cameraDevice(_cameraDevice),
+SnapShotControl::SnapShotControl(IDevice * cameraDevice_, CEventsManager* _evMngr)
+:  cameraDevice(cameraDevice_),
    eventsManager_(_evMngr),
    image_buffer_(NULL),
    is_poised_(false),

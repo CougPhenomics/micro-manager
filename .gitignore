@@ -55,9 +55,8 @@ test-driver
 *.pyo
 __pycache__/
 
-# IntelliJ and Pycharm
+# Pycharm IDE
 .idea
-*.iml
 
 # Build
 *.class
@@ -73,8 +72,8 @@ test-reports/
 /symbols/
 
 # Testing
-/testing/googletest.zip
-/testing/googletest/
+/testing/gmock-*.zip
+/testing/gmock/
 
 # Generated source
 /buildscripts/launchers/micromanager

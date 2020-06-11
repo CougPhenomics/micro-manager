@@ -3,5 +3,6 @@
         <path id="plugin.classpath">
                 <pathelement location="/usr/share/java/jogl2.jar"/>
         </path>
-</project>
 
+
+</project>

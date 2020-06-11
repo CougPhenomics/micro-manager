@@ -4,12 +4,7 @@ import java.io.File;
 import java.nio.file.Path;
 import org.micromanager.MultiStagePosition;
 import org.micromanager.PositionList;
-
-// Imports for MMStudio internal packages
-// Plugins should not access internal packages, to ensure modularity and
-// maintainability. However, this plugin code is older than the current
-// MMStudio API, so it still uses internal classes and interfaces. New code
-// should not imitate this practice.
+import org.micromanager.internal.positionlist.utils.TileCreator;
 import org.micromanager.internal.utils.ReportingUtils;
 
 /**

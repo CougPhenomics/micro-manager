@@ -38,8 +38,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import javax.swing.SwingUtilities;
-import mmcorej.org.json.JSONException;
-import mmcorej.org.json.JSONObject;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.micromanager.PropertyMap;
 import org.micromanager.data.Coords;
 import org.micromanager.data.Datastore;
@@ -359,7 +359,7 @@ public final class MultipageTiffReader {
          DefaultCoords.Builder builder = new DefaultCoords.Builder();
          builder.channel(channel)
                  .z(slice)
-                 .t(frame)
+                 .time(frame)
                  .stagePosition(position);
          coordsToOffset_.put(builder.build(), imageOffset);
       }

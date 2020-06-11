@@ -57,7 +57,6 @@ public final class DefaultMetadata implements Metadata {
       }
 
       @Override
-      @Deprecated
       public Builder uuid() {
          return generateUUID();
       }
@@ -268,7 +267,6 @@ public final class DefaultMetadata implements Metadata {
    }
       
    @Override
-   @Deprecated
    public Double getElapsedTimeMs() {
       return pmap_.containsKey(ELAPSED_TIME_MS.key()) ?
             pmap_.getDouble(ELAPSED_TIME_MS.key(), Double.NaN) : null;

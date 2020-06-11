@@ -43,14 +43,9 @@ import org.micromanager.Studio;
 import org.micromanager.data.Coords;
 import org.micromanager.data.DataProvider;
 import org.micromanager.display.DisplayWindow;
-
-// Imports for MMStudio internal packages
-// Plugins should not access internal packages, to ensure modularity and
-// maintainability. However, this plugin code is older than the current
-// MMStudio API, so it still uses internal classes and interfaces. New code
-// should not imitate this practice.
 import org.micromanager.internal.utils.MMDialog;
 import org.micromanager.internal.utils.ProgressBar;
+import org.micromanager.internal.utils.ReportingUtils;
 
 /**
  *
@@ -112,7 +107,7 @@ public class DuplicatorPluginFrame extends MMDialog {
                      coord = coord.copyBuilder().index(axis, mins.get(axis)).build();
                      ourWindow_.setDisplayPosition(coord);
                   } catch (IOException ioe) {
-                     studio_.logs().logError(ioe, "IOException in DuplicatorPlugin");
+                     ReportingUtils.logError(ioe, "IOException in DuplicatorPlugin");
                   }
                });
                super.add(minSpinner, "wmin 60");
@@ -135,7 +130,7 @@ public class DuplicatorPluginFrame extends MMDialog {
                      coord = coord.copyBuilder().index(axis, maxes.get(axis)).build();
                      ourWindow_.setDisplayPosition(coord);
                   } catch (IOException ioe) {
-                     studio_.logs().logError(ioe, "IOException in DuplcatorPlugin");
+                     ReportingUtils.logError(ioe, "IOException in DuplcatorPlugin");
                   }
                });
                super.add(maxSpinner, "wmin 60, wrap");

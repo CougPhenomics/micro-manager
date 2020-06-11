@@ -39,7 +39,6 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import net.miginfocom.swing.MigLayout;
 import org.micromanager.PropertyMap;
-import org.micromanager.PropertyMaps;
 import org.micromanager.Studio;
 import org.micromanager.data.ProcessorConfigurator;
 import org.micromanager.data.ProcessorFactory;
@@ -265,7 +264,7 @@ final public class PipelineFrame extends MMFrame
       ArrayList<String> names = new ArrayList<String>(nameToPath.keySet());
       Collections.sort(names);
       addProcessorPopup_.removeAll();
-      final PropertyMap blankSettings = PropertyMaps.builder().build();
+      final PropertyMap blankSettings = studio_.data().getPropertyMapBuilder().build();
       for (final String name : names) {
          Action addAction = new AbstractAction() {
             @Override
@@ -306,7 +305,7 @@ final public class PipelineFrame extends MMFrame
    public void addAndConfigureProcessor(ProcessorPlugin plugin) {
       // Create it with a blank set of settings.
       ProcessorConfigurator configurator = plugin.createConfigurator(
-            PropertyMaps.builder().build());
+            studio_.data().getPropertyMapBuilder().build());
       getTableModel().addConfigurator(new ConfiguratorWrapper(plugin,
             configurator, plugin.getName()));
       setVisible(true);

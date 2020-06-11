@@ -125,7 +125,6 @@ public final class DefaultAnnotation implements Annotation {
    }
 
    @Override
-   @Deprecated
    public String getFilename() {
       return filename_;
    }

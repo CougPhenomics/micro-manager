@@ -12,7 +12,7 @@ import mmcorej.Configuration;
 import mmcorej.PropertySetting;
 import mmcorej.StrVector;
 import mmcorej.TaggedImage;
-import mmcorej.org.json.JSONObject;
+import org.json.JSONObject;
 import org.micromanager.PositionList;
 import org.micromanager.Studio;
 import org.micromanager.acquisition.ChannelSpec;
@@ -20,6 +20,7 @@ import org.micromanager.acquisition.SequenceSettings;
 import org.micromanager.data.Datastore;
 import org.micromanager.data.Pipeline;
 import org.micromanager.events.AcquisitionEndedEvent;
+import org.micromanager.events.internal.ChannelGroupEvent;
 import org.micromanager.events.internal.DefaultAcquisitionEndedEvent;
 import org.micromanager.events.internal.DefaultAcquisitionStartedEvent;
 import org.micromanager.events.internal.InternalShutdownCommencingEvent;
@@ -174,11 +175,8 @@ public final class AcquisitionWrapperEngine implements AcquisitionEngine {
    private int getNumChannels() {
       int numChannels = 0;
       if (useChannels_) {
-         if (channels_ == null) {
-            return 0;
-         }
          for (ChannelSpec channel : channels_) {
-            if (channel.useChannel()) {
+            if (channel.useChannel) {
                ++numChannels;
             }
          }
@@ -217,46 +215,20 @@ public final class AcquisitionWrapperEngine implements AcquisitionEngine {
    }
 
    private int getTotalImages() {
-      if (!useChannels_) {
-         return getNumFrames() * getNumSlices() * getNumChannels() * getNumPositions();
-      }
-
-      int nrImages = 0;
-      for (ChannelSpec channel : channels_) {
-         if (channel.useChannel()) {
-            for (int t = 0; t < getNumFrames(); t++) {
-               boolean doTimePoint = true;
-               if (channel.skipFactorFrame() > 0) {
-                  if (t % (channel.skipFactorFrame() + 1) != 0 ) {
-                     doTimePoint = false;
-                  }
-               }
-               if (doTimePoint) {
-                  if (channel.doZStack()) {
-                     nrImages += getNumSlices();
-                  } else {
-                     nrImages++;
-                  }
-               }
-             }
-         }
-      }
-      return nrImages;
+      int totalImages = getNumFrames() * getNumSlices() * getNumChannels() * getNumPositions();
+      return totalImages;
    }
 
-   public long getTotalMemory() {
+   private long getTotalMB() {
       CMMCore core = studio_.core();
-      long totalMB = core.getImageWidth() * core.getImageHeight() * core.getBytesPerPixel() * ((long) getTotalImages());
+      long totalMB = core.getImageWidth() * core.getImageHeight() * core.getBytesPerPixel() * ((long) getTotalImages()) / 1048576L;
       return totalMB;
    }
 
    private void updateChannelCameras() {
-      ArrayList<ChannelSpec> camChannels = new ArrayList<>();
-      for (int row = 0; row < channels_.size(); row++) {
-         camChannels.add(row,
-                 channels_.get(row).copyBuilder().camera(getSource(channels_.get(row))).build());
+      for (ChannelSpec channel : channels_) {
+         channel.camera = getSource(channel);
       }
-      channels_ = camChannels;
    }
 
    /*
@@ -280,7 +252,7 @@ public final class AcquisitionWrapperEngine implements AcquisitionEngine {
 
    private String getSource(ChannelSpec channel) {
       try {
-         Configuration state = core_.getConfigState(core_.getChannelGroup(), channel.config());
+         Configuration state = core_.getConfigState(core_.getChannelGroup(), channel.config);
          if (state.isPropertyIncluded("Core", "Camera")) {
             return state.getSetting("Core", "Camera").getPropertyValue();
          } else {
@@ -340,7 +312,7 @@ public final class AcquisitionWrapperEngine implements AcquisitionEngine {
 
       if (this.useChannels_) {
          for (ChannelSpec channel : channels_) {
-            if (channel.useChannel()) {
+            if (channel.useChannel) {
                acquisitionSettings.channels.add(channel);
             }
          }
@@ -647,6 +619,7 @@ public final class AcquisitionWrapperEngine implements AcquisitionEngine {
             }
             return false;
          }
+         studio_.events().post(new ChannelGroupEvent());
          return true;
       } else {
          return false;
@@ -793,11 +766,15 @@ public final class AcquisitionWrapperEngine implements AcquisitionEngine {
    @Override
    public boolean addChannel(String config, double exp, Boolean doZStack, double zOffset, int skip, Color c, boolean use) {
       if (isConfigAvailable(config)) {
-         ChannelSpec.Builder cb = new ChannelSpec.Builder();
-         cb.channelGroup(this.getChannelGroup()).config(config).useChannel(use).
-                 exposure(exp).doZStack(doZStack).zOffset(zOffset).color(c).
-                 skipFactorFrame(skip);
-         channels_.add(cb.build());
+         ChannelSpec channel = new ChannelSpec();
+         channel.config = config;
+         channel.useChannel = use;
+         channel.exposure = exp;
+         channel.doZStack = doZStack;
+         channel.zOffset = zOffset;
+         channel.color = c;
+         channel.skipFactorFrame = skip;
+         channels_.add(channel);
          return true;
       } else {
          ReportingUtils.logError("\"" + config + "\" is not found in the current Channel group.");
@@ -859,8 +836,8 @@ public final class AcquisitionWrapperEngine implements AcquisitionEngine {
             return false;
          }
       }
-      long usableMB = root.getUsableSpace();
-      return (1.25 * getTotalMemory()) < usableMB;
+      long usableMB = root.getUsableSpace() / (1024 * 1024);
+      return (1.25 * getTotalMB()) < usableMB;
    }
 
    @Override
@@ -870,54 +847,24 @@ public final class AcquisitionWrapperEngine implements AcquisitionEngine {
       int numPositions = getNumPositions();
       int numChannels = getNumChannels();
 
-      double exposurePerTimePointMs = 0.0;
-      if (this.useChannels_) {
-         for (ChannelSpec channel : channels_) {
-            if (channel.useChannel()) {
-               double channelExposure = channel.exposure();
-               if (channel.doZStack()) {
-                  channelExposure *= getNumSlices();
-               }
-               channelExposure *= getNumPositions();
-               exposurePerTimePointMs += channelExposure;
-            }
-         }
-      } else { // use the current settings for acquisition
-         try {
-            exposurePerTimePointMs = core_.getExposure() * getNumSlices() * getNumPositions();
-         } catch (Exception ex) {
-            studio_.logs().logError(ex, "Failed to get exposure time");
-         }
-      }
-
       int totalImages = getTotalImages();
-      long totalMB = getTotalMemory() / (1024 * 1024);
+      long totalMB = getTotalMB();
 
       double totalDurationSec = 0;
-      double interval = (interval_ > exposurePerTimePointMs) ? interval_ : exposurePerTimePointMs;
       if (!useCustomIntervals_) {
-         totalDurationSec = interval * (numFrames - 1) / 1000.0;
+         totalDurationSec = interval_ * numFrames / 1000.0;
       } else {
          for (Double d : customTimeIntervalsMs_) {
             totalDurationSec += d / 1000.0;
          }
       }
-      totalDurationSec += exposurePerTimePointMs / 1000;
       int hrs = (int) (totalDurationSec / 3600);
       double remainSec = totalDurationSec - hrs * 3600;
       int mins = (int) (remainSec / 60);
       remainSec = remainSec - mins * 60;
 
-      String durationString = "\nMinimum duration: ";
-      if (hrs > 0) {
-         durationString += hrs + "h ";
-      }
-      if (mins > 0 || hrs > 0) {
-         durationString += mins + "m ";
-      }
-      durationString += NumberUtils.doubleToDisplayString(remainSec) + "s";
-
-      String txt =
+      String txt;
+      txt =
               "Number of time points: " + (!useCustomIntervals_
               ? numFrames : customTimeIntervalsMs_.size())
               + "\nNumber of positions: " + numPositions
@@ -925,7 +872,7 @@ public final class AcquisitionWrapperEngine implements AcquisitionEngine {
               + "\nNumber of channels: " + numChannels
               + "\nTotal images: " + totalImages
               + "\nTotal memory: " + (totalMB <= 1024 ? totalMB + " MB" : NumberUtils.doubleToDisplayString(totalMB/1024.0) + " GB")
-              + durationString;
+              + "\nDuration: " + hrs + "h " + mins + "m " + NumberUtils.doubleToDisplayString(remainSec) + "s";
 
       if (useFrames_ || useMultiPosition_ || useChannels_ || useSlices_) {
          StringBuffer order = new StringBuffer("\nOrder: ");

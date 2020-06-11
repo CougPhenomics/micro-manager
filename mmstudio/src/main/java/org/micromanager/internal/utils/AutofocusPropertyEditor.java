@@ -61,7 +61,6 @@ import org.micromanager.internal.MMStudio;
  * device - property - value
  */
 public final class AutofocusPropertyEditor extends MMDialog {
-   private final Studio studio_;
    private final SpringLayout springLayout;
    private static final long serialVersionUID = 1507097881635431043L;
    
@@ -78,7 +77,6 @@ public final class AutofocusPropertyEditor extends MMDialog {
    
    public AutofocusPropertyEditor(Studio studio, DefaultAutofocusManager afmgr) {
       super("autofocus property editor");
-      studio_ = studio;
       afMgr_ = afmgr;
       setModal(false);
       data_ = new PropertyTableData();
@@ -108,7 +106,7 @@ public final class AutofocusPropertyEditor extends MMDialog {
          public void windowOpened(WindowEvent e) {
             // restore values from the previous session
             showReadonlyCheckBox_.setSelected(
-               profile.getSettings(AutofocusPropertyEditor.class).getBoolean(
+               profile.getBoolean(AutofocusPropertyEditor.class,
                   PREF_SHOW_READONLY, true));
             data_.updateStatus();
             data_.fireTableStructureChanged();
@@ -168,8 +166,8 @@ public final class AutofocusPropertyEditor extends MMDialog {
       getContentPane().add(showReadonlyCheckBox_);
       
       // restore values from the previous session
-      showReadonlyCheckBox_.setSelected(profile.getSettings(
-               AutofocusPropertyEditor.class).getBoolean(PREF_SHOW_READONLY, true));
+      showReadonlyCheckBox_.setSelected(profile.getBoolean(
+               AutofocusPropertyEditor.class, PREF_SHOW_READONLY, true));
       {
          btnClose = new JButton("Close");
          btnClose.addActionListener(new ActionListener() {
@@ -262,8 +260,9 @@ public final class AutofocusPropertyEditor extends MMDialog {
          
 
    public void cleanup() {
-      studio_.profile().getSettings(AutofocusPropertyEditor.class).
-              putBoolean(PREF_SHOW_READONLY, showReadonlyCheckBox_.isSelected());
+      MMStudio.getInstance().profile().setBoolean(
+            AutofocusPropertyEditor.class, PREF_SHOW_READONLY, 
+              showReadonlyCheckBox_.isSelected());
       if (afMgr_ != null)
          if (afMgr_.getAutofocusMethod() != null) {
             afMgr_.getAutofocusMethod().applySettings();

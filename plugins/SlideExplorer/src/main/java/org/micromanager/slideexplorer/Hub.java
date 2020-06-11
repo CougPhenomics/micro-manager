@@ -19,14 +19,9 @@ import mmcorej.StrVector;
 import org.micromanager.internal.MMStudio;
 import org.micromanager.Studio;
 import org.micromanager.UserProfile;
-
-// Imports for MMStudio internal packages
-// Plugins should not access internal packages, to ensure modularity and
-// maintainability. However, this plugin code is older than the current
-// MMStudio API, so it still uses internal classes and interfaces. New code
-// should not imitate this practice.
 import org.micromanager.internal.utils.AffineUtils;
 import org.micromanager.internal.utils.imageanalysis.ImageUtils;
+import org.micromanager.internal.utils.ReportingUtils;
 
 public class Hub {
    private final Studio studio_;
@@ -107,7 +102,7 @@ public class Hub {
          transform = AffineUtils.doubleToAffine(core.getPixelSizeAffine());
       }
       catch (Exception e) {
-         studio_.logs().logError(e, "Error getting pixel size config");
+         ReportingUtils.logError(e, "Error getting pixel size config");
       }
 
       if (transform == null) {
@@ -120,7 +115,7 @@ public class Hub {
             try {
                ((MMStudio) studio_).createCalibrationListDlg();
             } catch (Exception ex) {
-               studio_.logs().showError("Unable to start Pixel Size Calibration.");
+               ReportingUtils.showError("Unable to start Pixel Size Calibration.");
             }
          }
       }
@@ -144,7 +139,7 @@ public class Hub {
             }
          }
       } catch (Exception e) {
-         studio_.logs().showError(e);
+         ReportingUtils.showError(e);
       }
    }
 
@@ -169,7 +164,7 @@ public class Hub {
          try {
             tgt_.join();
          } catch (InterruptedException e) {
-            studio_.logs().showError(e);
+            ReportingUtils.showError(e);
          }
          cache_.clear();
          running_ = false;
@@ -338,7 +333,7 @@ public class Hub {
          }
          navigatePixelSizeConfig_ = surveyPixelSizeConfig_;
       } catch (Exception ex) {
-         studio_.logs().showError(ex);
+         ReportingUtils.showError(ex);
       }
       setOffsets(surveyPixelSizeConfig_);
    }
@@ -389,7 +384,7 @@ public class Hub {
       try {
          curConfig = core_.getCurrentPixelSizeConfig();
       } catch (Exception ex) {
-         studio_.logs().logError(ex);
+         ReportingUtils.logError(ex);
       }
 
 
@@ -411,7 +406,7 @@ public class Hub {
          try {
             navigatePixelSizeConfig_ = core_.getCurrentPixelSizeConfig();
          } catch (Exception ex) {
-            studio_.logs().showError(ex);
+            ReportingUtils.showError(ex);
          }
          applySystemSettings(surveyPixelSizeConfig_);
 
@@ -449,7 +444,7 @@ public class Hub {
          }
 
       } catch (Exception ex) {
-         studio_.logs().showError(ex);
+         ReportingUtils.showError(ex);
       }
       coords_.setRoiDimensionsOnMap(controller_.getCurrentRoiDimensions());
    }
@@ -461,7 +456,7 @@ public class Hub {
          try {
             result = core_.isContinuousFocusEnabled();
          } catch (Exception ex) {
-         studio_.logs().showError(ex);
+         ReportingUtils.showError(ex);
       }
       }
       return result;
@@ -477,7 +472,7 @@ public class Hub {
             core_.waitForDevice(autofocusDevice);
          }
       } catch (Exception ex) {
-         studio_.logs().showError(ex);
+         ReportingUtils.showError(ex);
       }
    }
 
@@ -490,7 +485,7 @@ public class Hub {
             core_.waitForDevice(autofocusDevice);
          }
       } catch (Exception ex) {
-         studio_.logs().showError(ex);
+         ReportingUtils.showError(ex);
       }
    }
 
@@ -641,13 +636,13 @@ public class Hub {
                      acquireNewTile(tile);
                      SwingUtilities.invokeLater(new GUIUpdater(tile));
                   } catch (Throwable e) {
-                     studio_.logs().logError(e.getMessage());
+                     ReportingUtils.logError(e);
                   }
                } else {
                   try {
                      sleep(20);
                   } catch (InterruptedException e) {
-                     studio_.logs().logError(e, "tileGrabberThread sleep resulted in an exception.");
+                     ReportingUtils.logError(e, "tileGrabberThread sleep resulted in an exception.");
                   }
                }
             } else {
@@ -655,7 +650,7 @@ public class Hub {
                try {
                   sleep(20);
                } catch (InterruptedException e) {
-                  studio_.logs().logError(e, "tileGrabberThread sleep resulted in an exception.");
+                  ReportingUtils.logError(e, "tileGrabberThread sleep resulted in an exception.");
                }
             }
          }
@@ -729,9 +724,9 @@ public class Hub {
                   nearestTiles.add(neededTile);
                }
             } catch (ArrayIndexOutOfBoundsException e) {
-               studio_.logs().logError(e);
+               ReportingUtils.logError(e);
             } catch (NullPointerException e) {
-               studio_.logs().logError(e);
+               ReportingUtils.logError(e);
             }
          }
          return nearestTiles;

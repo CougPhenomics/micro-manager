@@ -48,12 +48,6 @@
     <ClCompile Include="BooleanPropertyWithPoiseControl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Andor\SRRFControl.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SRRFAndorSDK3Camera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AndorSDK3.h">
@@ -99,15 +93,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="BooleanPropertyWithPoiseControl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Andor\SRRFCamera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Andor\SRRFControl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SRRFAndorSDK3Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

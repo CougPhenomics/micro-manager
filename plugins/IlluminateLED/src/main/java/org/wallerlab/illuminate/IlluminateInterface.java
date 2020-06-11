@@ -33,8 +33,8 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import mmcorej.CMMCore;
-import mmcorej.org.json.JSONArray;
-import mmcorej.org.json.JSONObject;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 /**
  *

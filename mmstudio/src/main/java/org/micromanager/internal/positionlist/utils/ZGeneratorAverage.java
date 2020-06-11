@@ -46,10 +46,10 @@ class ZGeneratorAverage implements ZGenerator {
        for (int a=0; a<msp0.size(); a++){
            sp = msp0.get(a);
            if (sp.is1DStagePosition()){
-              c = sp.get1DPosition();
+              c = sp.x;
               //Calculate sum of positions for current axis
               for (int p=1; p<positionList.getNumberOfPositions(); p++){
-                  c = c + positionList.getPosition(p).get(a).get1DPosition();
+                  c = c + positionList.getPosition(p).get(a).x;                
               }
 
               Double z = c / positionList.getNumberOfPositions(); //average

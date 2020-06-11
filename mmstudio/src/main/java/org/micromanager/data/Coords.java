@@ -88,7 +88,7 @@ public interface Coords {
       @Override Builder channel(int channel);
 
       /** 
-       * Shorthand for {@link #channel(int) channel}.
+       * Shorthand for {@link channel}.
        * @param channel channel index (0-based)
        * @return  this
        */
@@ -104,7 +104,7 @@ public interface Coords {
       Builder timePoint(int frame);
 
       /**
-       * Same as {@link #timePoint(int) timePoint}.
+       * Same as {@link timePoint}.
        * @param timepoint (0-based)
        * @return this
        * @deprecated Due to being confusing with physical time.
@@ -114,7 +114,7 @@ public interface Coords {
       Builder time(int timepoint);
 
       /** 
-       * Shorthand for {@link #time(int) time}.
+       * Shorthand for {@link time}. 
        * @param timepoint (0-based)
        * @return this
        */
@@ -130,7 +130,7 @@ public interface Coords {
       Builder zSlice(int slice);
 
       /** 
-       * Shorthand for {@link #zSlice(int)}.
+       * Shorthand for {@link zSlice}. 
        * Set the Z slice index.
        * Equivalent to {@code index(Coords.Z_SLICE, slice)}.
        *
@@ -149,7 +149,7 @@ public interface Coords {
       @Override Builder stagePosition(int index);
 
       /** 
-       * Shorthand for {@link #stagePosition(int) stagePosition}.
+       * Shorthand for {@link stagePosition}. 
        * Set the stage position index.
        * Equivalent to {@code index(Coords.STAGE_POSITION, index)}.
        *
@@ -222,7 +222,7 @@ public interface Coords {
    public int getChannel();
 
    /** 
-    * Shorthand for {@link #getChannel() getChannel}.
+    * Shorthand for {@link getChannel}. 
     * @return channel index, or {@code -1} if this {@code Coords} doesn't
     * contain a channel index.
     */
@@ -239,15 +239,14 @@ public interface Coords {
    public int getTimePoint();
 
    /** 
-    * Same as {@link #getTimePoint() getTimePoint}.
+    * Same as {@link getTimePoint}.
     * @return time index (0-based)
-    * @deprecated Due to looking like the physical time rather than an index. Use {@link #getTimePoint() getTmePoint}
+    * @deprecated Due to looking like the physical time rather than an index.
     */
-   @Deprecated
    public int getTime();
 
    /** 
-    * Shorthand for {@link #getTimePoint() getTimePoint}.
+    * Shorthand for {@link getTimePoint}. 
     *
     * @return time point index, or {@code -1} if this {@code Coords} doesn't
     * contain a time point index.
@@ -264,7 +263,7 @@ public interface Coords {
     */
    public int getZSlice();
 
-   /** Shorthand for {@link #getZSlice() getZSlice}
+   /** Shorthand for {@link getZSlice}     
     * 
     * @return Z slice index, or {@code -1} if this {@code Coords} doesn't
     * contain a Z slice index.
@@ -281,7 +280,7 @@ public interface Coords {
     */
    public int getStagePosition();
 
-   /** Shorthand for {@link #getStagePosition() getStagePosition}.
+   /** Shorthand for {@link getStagePosition}.  
     * 
     * @return stage position index, or {@code -1} if this {@code Coords}
     * doesn't contain a stage position index.
@@ -332,7 +331,7 @@ public interface Coords {
    /**
     * @param alt the instance to compare with
     * @return whether this instance is a superspace coords of {@code other}
-    * @deprecated Use the equivalent {@link #isSubspaceCoordsOf(Coords) isSubspaceCoordsOf} instead.
+    * @deprecated Use the equivalent {@link isSubspaceCoordsOf} instead. 
     */
    @Deprecated
    public boolean matches(Coords alt);
@@ -341,7 +340,7 @@ public interface Coords {
 
    /**
     * @return Builder
-    * @deprecated Use {@link #copyBuilder() copyBuilder} instead
+    * @deprecated Use {@link copyBuilder} instead
     */
    @Deprecated
    public CoordsBuilder copy();

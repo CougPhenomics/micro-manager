@@ -630,7 +630,7 @@
 
 
 %typemap(javaimports) CMMCore %{
-   import mmcorej.org.json.JSONObject;
+   import org.json.JSONObject;
    import java.awt.geom.Point2D;
    import java.awt.Rectangle;
    import java.util.ArrayList;

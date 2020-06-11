@@ -23,7 +23,7 @@ package org.micromanager.acquisition.internal;
 
 import java.util.concurrent.BlockingQueue;
 import mmcorej.TaggedImage;
-import mmcorej.org.json.JSONObject;
+import org.json.JSONObject;
 import org.micromanager.AutofocusPlugin;
 import org.micromanager.PositionList;
 import org.micromanager.acquisition.SequenceSettings;

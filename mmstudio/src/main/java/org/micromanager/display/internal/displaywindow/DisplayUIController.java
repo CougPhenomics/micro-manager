@@ -14,6 +14,8 @@
 
 package org.micromanager.display.internal.displaywindow;
 
+import org.micromanager.display.internal.event.DataViewerMousePixelInfoChangedEvent;
+import org.micromanager.internal.utils.ColorMaps;
 import com.bulenkov.iconloader.IconLoader;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -30,7 +32,11 @@ import java.awt.LayoutManager;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
-import java.awt.event.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.awt.geom.Rectangle2D;
 import java.io.Closeable;
 import java.io.IOException;
@@ -72,23 +78,11 @@ import org.micromanager.data.internal.DefaultCoords;
 import org.micromanager.display.ChannelDisplaySettings;
 import org.micromanager.display.ComponentDisplaySettings;
 import org.micromanager.display.DisplaySettings;
-import org.micromanager.display.internal.RememberedSettings;
 import org.micromanager.display.internal.animate.AnimationController;
 import org.micromanager.display.internal.displaywindow.imagej.ImageJBridge;
-import org.micromanager.display.internal.event.DisplayKeyPressEvent;
 import org.micromanager.display.internal.imagestats.BoundsRectAndMask;
 import org.micromanager.display.internal.imagestats.ImageStats;
 import org.micromanager.display.internal.imagestats.ImagesAndStats;
-import org.micromanager.events.LiveModeEvent;
-import org.micromanager.display.DisplayWindowControlsFactory;
-import org.micromanager.display.internal.DefaultComponentDisplaySettings;
-import org.micromanager.display.internal.displaywindow.imagej.MMImageCanvas;
-import org.micromanager.display.internal.event.DisplayMouseEvent;
-import org.micromanager.display.internal.event.DisplayMouseWheelEvent;
-import org.micromanager.display.internal.event.DataViewerMousePixelInfoChangedEvent;
-import org.micromanager.display.internal.gearmenu.GearButton;
-import org.micromanager.display.overlay.Overlay;
-import org.micromanager.events.internal.ChannelColorEvent;
 import org.micromanager.internal.utils.GUIUtils;
 import org.micromanager.internal.utils.Geometry;
 import org.micromanager.internal.utils.MMFrame;
@@ -99,10 +93,16 @@ import org.micromanager.internal.utils.PopupButton;
 import org.micromanager.internal.utils.ThreadFactoryFactory;
 import org.micromanager.internal.utils.performance.PerformanceMonitor;
 import org.micromanager.internal.utils.performance.TimeIntervalRunningQuantile;
+import org.micromanager.display.DisplayWindowControlsFactory;
+import org.micromanager.display.internal.DefaultComponentDisplaySettings;
+import org.micromanager.display.internal.displaywindow.imagej.MMImageCanvas;
+import org.micromanager.display.internal.event.DisplayMouseEvent;
+import org.micromanager.display.internal.event.DisplayMouseWheelEvent;
+import org.micromanager.display.internal.gearmenu.GearButton;
+import org.micromanager.display.overlay.Overlay;
 import org.micromanager.internal.utils.JavaUtils;
 import org.micromanager.internal.utils.NumberUtils;
 import org.micromanager.internal.utils.ReportingUtils;
-import org.micromanager.internal.utils.ColorMaps;
 
 /**
  * Manages the JFrame(s) for image displays.
@@ -188,7 +188,6 @@ public final class DisplayUIController implements Closeable, WindowListener,
    private ImagesAndStats displayedImages_;
    private Double cachedPixelSize_ = -1.0;
    private boolean isPreview_ = false;
-   private ChannelColorEvent channelColorEvent_;
 
    private BoundsRectAndMask lastSeenSelection_;
 
@@ -218,11 +217,6 @@ public final class DisplayUIController implements Closeable, WindowListener,
    private PerformanceMonitor perfMon_;
    
    private double startTime_ = 0.0; // Elapsed Time for frame #0
-   private long nrLiveFramesReceived_ = 0;
-   private long lastImageNumber_ = 0;
-   private double durationMs_ = 0.0;
-   private double lastElapsedTimeMs_ = 0.0;
-   private double fps_ = 0.0;
 
    private static final int MIN_CANVAS_HEIGHT = 100;
    private static final int BORDER_THICKNESS = 2;
@@ -237,7 +231,6 @@ public final class DisplayUIController implements Closeable, WindowListener,
       DisplayUIController instance = new DisplayUIController(studio, parent,
             controlsFactory, animationController);
       parent.registerForEvents(instance);
-      studio.events().registerForEvents(instance);
       instance.frame_.addWindowListener(instance);
       return instance;
    }
@@ -952,32 +945,8 @@ public final class DisplayUIController implements Closeable, WindowListener,
          for (int i = 0; i < nChannels; ++i) {
             ChannelDisplaySettings channelSettings
                     = settings.getChannelSettings(i);
-            // Update RememberedSettings for this channel.
-            // We update color only, but unfortunately, we get called here
-            // also when other things change
-            // TODO: should all channeldisplaysetting changes be remembered?
-            ChannelDisplaySettings rememberedSettings =
-                    RememberedSettings.loadChannel(studio_,
-                            channelSettings.getGroupName(), channelSettings.getName(), null);
-            if (!rememberedSettings.getColor().equals(channelSettings.getColor())) {
-               // To ensure that we do not respond to the event posted by us
-               // (which will result in a continuous loop), remember our event
-               // so that it can be ignored in the event handler.
-               // This requires that the event bus is synchronous (which it is now),
-               // and that this code always runs on the same thread (it should
-               // always run on the EDT)
-               channelColorEvent_ = new ChannelColorEvent(
-                       channelSettings.getGroupName(),
-                       channelSettings.getName(),
-                       channelSettings.getColor());
-               studio_.events().post(channelColorEvent_);
-            }
-            RememberedSettings.storeChannel(studio_, channelSettings.getGroupName(), channelSettings.getName(),
-                    rememberedSettings.copyBuilder().color(channelSettings.getColor()).build());
-
             ComponentDisplaySettings componentSettings =
                   channelSettings.getComponentSettings(0);
-            // TODO: Remember changes in component display settings?
             ijBridge_.mm2ijSetChannelColor(i, channelSettings.getColor());
             if (!autostretch) {
                int max = Math.max(1, (int) Math.min(Integer.MAX_VALUE,
@@ -1365,20 +1334,6 @@ public final class DisplayUIController implements Closeable, WindowListener,
    }
 
    /**
-    * a key was pressed on the display Canvas.  Post as an event.
-    * Let the caller know if any of the event handlers consumed the keypress
-    *
-    * @param e KeyEvent generated by the key press on our canvas
-    * @return true if action was taken by one of the handlers, false otherwise
-    */
-   public boolean keyPressOnImageConsumed(KeyEvent e) {
-      DisplayKeyPressEvent displayKeyPressEvent = new DisplayKeyPressEvent(e);
-      displayController_.postDisplayEvent(displayKeyPressEvent);
-      return displayKeyPressEvent.wasConsumed();
-   }
-
-
-   /**
     * Notify the UI controller that a mouse event occurred on the image canvas.
     *
     * If {@code imageLocation} is null or empty, the indicator is hidden. The
@@ -1560,21 +1515,9 @@ public final class DisplayUIController implements Closeable, WindowListener,
     * Display fps is confusing to the user.  It is unclear what it means.
     * It also can easily be confused with Playback fps and camera fps, 
     * which are more useful messages.
-    * I leave the old code below for future use, but no longer call it
+    * I leave the code here for future use, but no longer call it
     * Showing camera fps instead.  Display fps is set by the user, and the code
     * should make sure that it is correct.
-    * It is surprisingly difficult to estimate camera fps correctly with the
-    * information we get from the core.  We are using the imageNumber, inserted
-    * by the Circular Buffer to count images produced by the camera.  However,
-    * when the circular buffer is full, it will reset, so we need to deduce
-    * if that event took place, and calculate how many images we missed when that
-    * happened.  When the camera runs very fast, and the circular buffer is
-    * small, it may happen that the buffer overflows before we ever see an
-    * image (or possibly, the first image we see has a higher image number
-    * than the one we remembered from the last iteration, which is how we check
-    * for overflows), resulting in poor fps estimates.
-    * The Core is really much better suited to keep track of camera fps.
-    * I'll open a ticket, but until then, this is teh best I can come up with.
     */
    private void showFPS() {
       // Show camera FPS, only in the preview window (otherwise, what does the number mean?)
@@ -1587,50 +1530,21 @@ public final class DisplayUIController implements Closeable, WindowListener,
                cameraFpsLabel_.setText(" ");
                return;
             }
-            // The elapsedTime metadata can be inserted by the Circular buffer
-            // or by the Device Adapter.  When the Circular buffer resets, (i.e.
-            // after an overflow), the Circular Buffer will reset the imageNumber
-            // and elapsedTimeMs to 0, however, the Device Adapter can do whatever
-            // it wants.  Currently, the DemoCamera only inserts the elapsedTimeMs
-            // and will report the elapsedTime from the beginning of live mode,
-            // not the beginning of this Circular buffer, whereas the image number
-            // (inserted by the Circular Buffer) is the image number in this buffer.
-            // All of this is a bit crazy and needs refactoring, but deal with
-            // it using ugly heuristics for now
-            // Also note that changing the exposure time while live mode is
-            // running will result in wrong estimates of camera fps
-            // This really needs a better approach...
-            if (nrLiveFramesReceived_ == 0) {
-               durationMs_ = - metadata.getElapsedTimeMs(-1.0);
+            // since circular buffer overflow causes the numbers to reset to 0,
+            // but not the elapasedTimeMs, we need to keep track of the elapsedTime
+            // of every image with imageNumber 0:
+            if (nr == 0) {
+               startTime_ = metadata.getElapsedTimeMs(-1.0);
             }
-            double elapsedMs = metadata.getElapsedTimeMs(-1.0);
-            if (nr != null) {
-               if (nr < lastImageNumber_) {
-                  // circular buffer must have overflown and was reset
-                  // calculate missing images from buffer size and numbers we have
-                  long missingImages = studio_.core().getBufferTotalCapacity() -
-                          lastImageNumber_  + nr;
-                  nrLiveFramesReceived_ += missingImages;
-                  // reset also reset elapsedTimeMs_. Estimate real elapsedTime
-                  if (elapsedMs < lastElapsedTimeMs_ && fps_ > 0.0) {
-                     durationMs_ += missingImages * (1000.0 / fps_);
-                  }
+            double ms = metadata.getElapsedTimeMs(-1.0) - startTime_;
+            if (nr != null && ms > 0.0) {
+               double fps = (nr * 1000.0) / ms;
+               if (fps < 2.0) {
+                  cameraFpsLabel_.setText(String.format(
+                          "Camera: %.3g fps", fps));
                } else {
-                  nrLiveFramesReceived_ += nr - lastImageNumber_;
-                  durationMs_ += elapsedMs - lastElapsedTimeMs_;
-               }
-               lastImageNumber_ = nr;
-               lastElapsedTimeMs_ = elapsedMs;
-               if (durationMs_ > 0.0) {
-                  fps_ = ( (nrLiveFramesReceived_ - 1) * 1000.0) / durationMs_;
-                  if (fps_ < 2.0) {
-                     cameraFpsLabel_.setText(String.format(
-                             "Camera: %.3g fps", fps_));
-                  }
-                  else {
-                     cameraFpsLabel_.setText(String.format(
-                             "Camera: %d fps", (int) fps_));
-                  }
+                  cameraFpsLabel_.setText(String.format(
+                          "Camera: %d fps", (int) fps));
                }
             } else {
                cameraFpsLabel_.setText(" ");
@@ -2037,53 +1951,6 @@ public final class DisplayUIController implements Closeable, WindowListener,
       if (pixelInfoLabel_.getSize().width > pixelInfoLabel_.getMinimumSize().width) {
          pixelInfoLabel_.setMinimumSize(new Dimension(
                  pixelInfoLabel_.getSize().width, 10));
-      }
-   }
-
-   @Subscribe
-   public void onLiveModeEvent(LiveModeEvent liveModeEvent) {
-      // Used to reset counters for camera fps measurements
-      if (liveModeEvent.getIsOn()) {
-         nrLiveFramesReceived_ = 0;
-         lastImageNumber_ = 0;
-         durationMs_ = 0.0;
-         lastElapsedTimeMs_ = 0.0;
-         fps_ = 0.0;
-      }
-   }
-
-   @Subscribe
-   public void onChannelColorEvent(ChannelColorEvent channelColorEvent) {
-      // make sure we do not respond to the event we generated ourselves
-      if (!channelColorEvent.equals(channelColorEvent_)) {
-         if (channelColorEvent.getColor() != null) {
-            DisplaySettings oldDisplaySettings, newDisplaySettings;
-            do {
-               oldDisplaySettings = displayController_.getDisplaySettings();
-               int index = 0;
-               boolean found = false;
-               while (!found && index < oldDisplaySettings.getNumberOfChannels()) {
-                  ChannelDisplaySettings channelSettings = oldDisplaySettings.getChannelSettings(index);
-                  if (channelSettings.getGroupName().equals(channelColorEvent.getChannelGroup()) &&
-                          channelSettings.getName().equals(channelColorEvent.getChannel())) {
-                     found = true;
-                  }
-                  else {
-                     index++;
-                  }
-               }
-               if (!found) {
-                  return;
-               }
-               ChannelDisplaySettings channelSettings
-                       = oldDisplaySettings.getChannelSettings(index);
-               newDisplaySettings = oldDisplaySettings.
-                       copyBuilderWithChannelSettings(index,
-                               channelSettings.copyBuilder().color(
-                                       channelColorEvent.getColor()).build()).
-                       build();
-            } while (!displayController_.compareAndSetDisplaySettings(oldDisplaySettings, newDisplaySettings));
-         }
       }
    }
 }

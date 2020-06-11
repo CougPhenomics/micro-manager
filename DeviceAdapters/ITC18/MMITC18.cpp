@@ -131,17 +131,15 @@ initialized_ (false)
     SetErrorText(ERR_ITC18_NO_CHANNELS,"ITC18 needs at least one channel activated");
     SetErrorText(ERR_PROTOCOL_NOT_LOADED,"No protocol loaded to run");
 
-#ifdef __linux__
-
+    #ifndef WIN32
     hITC18Dll = dlopen("libitc18.0.1.so", RTLD_LAZY|RTLD_GLOBAL);
     if (!hITC18Dll)
     {	
         LogMessage("CITC18Hub(): Failed to find libitc18.0.1.so library",false);
         //fprintf(stderr,"CITC18Hub(): Failed to find itc18 library\n");
-        fprintf(stderr, "CITC18Hub(): %s\n", dlerror());
-	exit(ERR_ITC18_LIBRARY);
+        exit(ERR_ITC18_LIBRARY);
     }
-#else
+    #else
     hITC18Dll = ::GetModuleHandle("itcmm.dll"); 
     if (!hITC18Dll)
     {	
@@ -149,7 +147,7 @@ initialized_ (false)
         //fprintf(stderr,"CITC18Hub(): Failed to find itc18 library\n");
         exit(ERR_ITC18_LIBRARY);
     }
-#endif
+    #endif
     g_seqThread = new AcqSequenceThread(this);
 
 }
@@ -158,10 +156,10 @@ CITC18Hub::~CITC18Hub()
 {
     Shutdown();
 
-#ifdef __linux__
+    #ifndef WIN32
     if (hITC18Dll) dlclose(hITC18Dll);
     hITC18Dll = NULL;
-#endif
+    #endif
 
     g_seqThread->Stop();
     //g_seqThread->wait();
@@ -193,8 +191,7 @@ int CITC18Hub::Initialize()
     int busy;
     std::ostringstream eMsg;
     
-
-// Name
+    // Name
     int nRet = CreateProperty(MM::g_Keyword_Name, g_DeviceNameITC18Hub, MM::String, true);
     if (DEVICE_OK != nRet)
         return nRet;
@@ -315,8 +312,6 @@ CITC18Protocol::CITC18Protocol() :
                     frames_(1),
                     channels_(1),
                     slices_(1),
-                    zStep_um_(0),
-                    zStep_ms_(0),
                     minTime_(0),
                     maxTime_(0)
 {
@@ -386,18 +381,7 @@ int CITC18Protocol::Initialize()
 
     pAct = new CPropertyAction(this, &CITC18Protocol::OnSlices);
     CreateProperty("Slices","1", MM::Integer, true, pAct);
-
-    pAct = new CPropertyAction(this, &CITC18Protocol::OnStepSizeUm);
-    CreateProperty("StepSizeUm","0", MM::Float, true, pAct);
-    
-    pAct = new CPropertyAction(this, &CITC18Protocol::OnStepLowerLimitUm);
-    CreateProperty("StepLowerLimitUm","0", MM::Float, true, pAct);
-    
-    pAct = new CPropertyAction(this, &CITC18Protocol::OnStepUpperLimitUm);
-    CreateProperty("StepUpperLimitUm","0", MM::Float, true, pAct);
-
-    pAct = new CPropertyAction(this, &CITC18Protocol::OnStepTimeMs);
-    CreateProperty("StepTimeMs","0", MM::Integer, true, pAct);
+    CreateProperty("Slices Tip1", "Slices currently not used", MM::String, true);
 
     pAct = new CPropertyAction(this, &CITC18Protocol::OnChannels);
     CreateProperty("Channels","1", MM::Integer, true, pAct);
@@ -749,13 +733,7 @@ int CITC18Protocol::ParseHeader(char *line_)
      std::string line = line_;
      std::string line2;
      length = line.length();
-     slices_ = 1;
-     zStep_um_ = 0;
-     zStep_ll_um_ = 0;
-     zStep_ul_um_ = 0;
-     zStep_ms_ = 0;     
                
-     
           if (line[0] == '@')
           {    // these are some official xmgrace params that we will use for our own as well
                
@@ -783,26 +761,10 @@ int CITC18Protocol::ParseHeader(char *line_)
                } else
                if (line.find("# SLICES ") != std::string::npos )  {
                     if (length > 9) {
-                        int time;
-			float ulimit = 0,llimit = 0;
-			std::string buf;
-			
-			line2 = line.substr(9,length - 9);
-			std::stringstream ss(line2);
-			std::vector<std::string> slices; 
-    			while (ss >> buf)
-        			slices.push_back(buf);			
-			
-			for (unsigned i = 0; (i + 4) <= slices.size(); ++i) {
-				zStep_ms_ = atoi(slices[i++].c_str());
-				zStep_um_ = atof(slices[i++].c_str());
-				zStep_ll_um_ = atof(slices[i++].c_str());
-				zStep_ul_um_ = atof(slices[i++].c_str());
-			} 		
-			if (zStep_ms_ < 0) zStep_ms_ = 0;
-			else slices_ = (zStep_ul_um_ - zStep_ll_um_) / zStep_um_;
-			if (slices_ <= 0) slices_ = 1;
-		    }		
+                         line2 = line.substr(9,length - 9);
+                         slices_ = atoi(line2.c_str());
+                         if (slices_ < 1) slices_ = 1;
+                    }
                } else
                if (line.find("# CHANNELS ") != std::string::npos )  {
                     if (length > 11) {
@@ -988,7 +950,7 @@ int CITC18Protocol::OnTime (MM::PropertyBase* pProp, MM::ActionType pAct)
                     if (b_AD_[x] && pDataIn_ != NULL) 
                     {
                         g_currentAD[x] = pDataIn_[((g_currentTime - 1) * MaxChannels_) + FindInSequence(GetADid(x)) + PIPELINE];
-                        fprintf(stderr,"%ld AD %d = %d %ld\n",g_currentTime -1,x,g_currentAD[x],((g_currentTime - 1) * MaxChannels_) + FindInSequence(GetADid(x)) + PIPELINE);
+                        fprintf(stderr,"%d AD %d = %d %d\n",g_currentTime -1,x,g_currentAD[x],((g_currentTime - 1) * MaxChannels_) + FindInSequence(GetADid(x)) + PIPELINE);
                     }
                     else g_currentAD[x] = 0;
                 }
@@ -997,7 +959,7 @@ int CITC18Protocol::OnTime (MM::PropertyBase* pProp, MM::ActionType pAct)
                     if (b_DA_[x] && pDataOut_ != NULL) 
                     {
                         g_currentDA[x] = pDataOut_[((g_currentTime - 1) * MaxChannels_) + FindInSequence(GetDAid(x))];
-                        fprintf(stderr,"%ld DA %d = %d %ld\n",g_currentTime -1,x,g_currentDA[x],((g_currentTime -1 ) * MaxChannels_) + FindInSequence(GetDAid(x) ));
+                        fprintf(stderr,"%d DA %d = %d %d\n",g_currentTime -1,x,g_currentDA[x],((g_currentTime -1 ) * MaxChannels_) + FindInSequence(GetDAid(x) ));
                     }
                     else g_currentDA[x] = 0;
                 }
@@ -1023,7 +985,7 @@ int CITC18Protocol::OnFrames (MM::PropertyBase* pProp, MM::ActionType pAct)
 
     if (pAct == MM::BeforeGet)
     {
-        frames_ = images_/(channels_ * slices_);
+        frames_ = images_/channels_;
         pProp->Set(frames_);
     }
 
@@ -1040,53 +1002,6 @@ int CITC18Protocol::OnSlices (MM::PropertyBase* pProp, MM::ActionType pAct)
 
      return DEVICE_OK;
 }
-
-int CITC18Protocol::OnStepSizeUm (MM::PropertyBase* pProp, MM::ActionType pAct)
-{
-
-    if (pAct == MM::BeforeGet)
-    {
-        pProp->Set(zStep_um_);
-    }
-
-     return DEVICE_OK;
-}
-
-int CITC18Protocol::OnStepLowerLimitUm (MM::PropertyBase* pProp, MM::ActionType pAct)
-{
-
-    if (pAct == MM::BeforeGet)
-    {
-        pProp->Set(zStep_ll_um_);
-    }
-
-     return DEVICE_OK;
-}
-
-int CITC18Protocol::OnStepUpperLimitUm (MM::PropertyBase* pProp, MM::ActionType pAct)
-{
-
-    if (pAct == MM::BeforeGet)
-    {
-        pProp->Set(zStep_ul_um_);
-    }
-
-     return DEVICE_OK;
-}
-
-
-int CITC18Protocol::OnStepTimeMs (MM::PropertyBase* pProp, MM::ActionType pAct)
-{
-
-    if (pAct == MM::BeforeGet)
-    {
-        pProp->Set(zStep_ms_);
-    }
-
-     return DEVICE_OK;
-}
-
-
 int CITC18Protocol::OnChannels (MM::PropertyBase* pProp, MM::ActionType pAct)
 {
 

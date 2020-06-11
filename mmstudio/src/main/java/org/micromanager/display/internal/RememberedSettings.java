@@ -59,10 +59,10 @@ public class RememberedSettings {
               studio.profile().getSettings(RememberedSettings.class);
       if (cds instanceof DefaultChannelDisplaySettings) {        
          DefaultChannelDisplaySettings dcds = (DefaultChannelDisplaySettings) cds;
-         // for safety, ensure channelgroup and channelname are stored with ChannelDisplaySettings
+         // for safety, ensure that channelname is stored with ChannelDisplaySettings
          if (!dcds.getName().equals(channelName)) {
             dcds = (DefaultChannelDisplaySettings) 
-                    dcds.copyBuilder().groupName(channelGroup).name(channelName).build();
+                    dcds.copyBuilder().name(channelName).build();
          }
          PropertyMap pMap = dcds.toPropertyMap();
          settings.putPropertyMap(key, pMap);
@@ -81,40 +81,33 @@ public class RememberedSettings {
     * @param studio        Object used to get access to profile
     * @param channelGroup  Group to which the channel belongs
     * @param channelName   Channel name
-    * @param defaultColor  If nothing was found, use this color as the default color
-    *                      will be ignored when null
     * @return Stored or Default ChannelDisplaySetting
     */
    public static ChannelDisplaySettings loadChannel(Studio studio, 
-           String channelGroup, String channelName, Color defaultColor) {
+           String channelGroup, 
+           String channelName) {
       String key = genKey(channelGroup, channelName);
-      MutablePropertyMapView settings =
+      MutablePropertyMapView settings = 
               studio.profile().getSettings(RememberedSettings.class);
       if (settings.containsPropertyMap(key)) {
-         return DefaultChannelDisplaySettings.fromPropertyMap(
-                 settings.getPropertyMap(key, null), channelGroup, channelName);
-      }
-      else {
+         return DefaultChannelDisplaySettings.fromPropertyMap(settings.getPropertyMap(key, null));
+      } else {
          // for backward compatibility
          String rKey = RememberedChannelSettings.genKey(channelGroup, channelName);
          settings = studio.profile().getSettings(RememberedChannelSettings.class);
          if (settings.containsInteger(rKey + ":" + COLOR)) {
             RememberedChannelSettings rcs = RememberedChannelSettings.loadSettings(
-                    channelGroup,
-                    channelName,
-                    Color.WHITE,
-                    null,
-                    null,
+                    channelGroup, 
+                    channelName, 
+                    Color.WHITE, 
+                    null, 
+                    null, 
                     true);
-            return rcs.toChannelDisplaySetting(channelGroup, channelName);
+            return rcs.toChannelDisplaySetting(channelName);
          }
       }
-      ChannelDisplaySettings.Builder cdsBuilder =
-              DefaultChannelDisplaySettings.builder().name(channelName).component(1);
-      if (defaultColor != null) {
-         cdsBuilder.color(defaultColor);
-      }
-      return cdsBuilder.build();
+      
+      return DefaultChannelDisplaySettings.builder().name(channelName).component(1).build();
    }
    
    /**
@@ -133,7 +126,7 @@ public class RememberedSettings {
       List<String> channelNames = summary.getChannelNameList();
       for (int ch = 0; ch < channelNames.size(); ch++) {
          String channelName = summary.getSafeChannelName(ch);
-         ChannelDisplaySettings cds = loadChannel(studio, channelGroup, channelName, null);
+         ChannelDisplaySettings cds = loadChannel(studio, channelGroup, channelName);
          builder.channel(ch, cds);
       }
       if (channelNames.size() > 1) {

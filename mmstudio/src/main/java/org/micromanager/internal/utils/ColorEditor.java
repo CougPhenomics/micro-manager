@@ -42,11 +42,10 @@ ActionListener {
    private static final long serialVersionUID = -5497293610937812813L;
    Color currentColor;
    JButton button;
-   private final JColorChooser colorChooser;
-   private final JDialog dialog;
+   JColorChooser colorChooser;
+   JDialog dialog;
    protected static final String EDIT = "edit";
-   int row_;
-   private final int column_;
+   int column_;
    AbstractTableModel model_;
 
    public ColorEditor(AbstractTableModel model, int column) {
@@ -83,20 +82,14 @@ ActionListener {
          button.setBackground(currentColor);
          colorChooser.setColor(currentColor);
          dialog.setVisible(true);
-         // program flow is funky.  The dialog creates another actionevent, that
-         // is picked up by this same function, goes through the "else" below,
-         // and then continues here
 
          // Make the renderer reappear.
          fireEditingStopped();
          // Fire an event to enable saving the new color in the colorprefs
          // Don't know how to fire just for this row:
-         model_.fireTableCellUpdated(row_, column_);
-         /*
          for (int row=0; row < model_.getRowCount(); row++) {
             model_.fireTableCellUpdated(row, column_);
          }
-         */
 
       } else { //User pressed dialog's "OK" button.
          currentColor = colorChooser.getColor();
@@ -116,11 +109,7 @@ ActionListener {
          boolean isSelected,
          int row,
          int column) {
-      row_ = row;
       currentColor = (Color)value;
-      button.setBackground(currentColor);
-      button.setForeground(currentColor);
-      button.setOpaque(true);
       return button;
    }
 }

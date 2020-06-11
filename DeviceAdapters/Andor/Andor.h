@@ -70,7 +70,6 @@ class AcqSequenceThread;
 class SpuriousNoiseFilterControl;
 class ReadModeControl;
 class SRRFControl;
-class SRRFAndorCamera;
 //////////////////////////////////////////////////////////////////////////////
 // Implementation of the MMDevice and MMCamera interfaces
 //
@@ -410,7 +409,6 @@ private:
    void AddSRRFMetadataInfo(Metadata & md);
    int SnapImageNormal();
    int SnapImageSRRF();
-   bool IsSRRFEnabled() const;
 
    bool NeedToAllocateExtraBuffers(unsigned long bufferSizePixels) { return (unsigned long)(fullFrameX_ * fullFrameY_) < bufferSizePixels; }
 
@@ -424,7 +422,6 @@ private:
    SpuriousNoiseFilterControl* spuriousNoiseFilterControl_;
    ReadModeControl* readModeControl_;
    SRRFControl *SRRFControl_;
-   SRRFAndorCamera *SRRFAndorCamera_;
 };
 
 

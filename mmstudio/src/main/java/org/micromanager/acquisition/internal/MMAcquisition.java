@@ -34,9 +34,9 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.Timer;
-import mmcorej.org.json.JSONArray;
-import mmcorej.org.json.JSONException;
-import mmcorej.org.json.JSONObject;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.micromanager.Studio;
 import org.micromanager.alerts.UpdatableAlert;
 import org.micromanager.data.Coords;
@@ -58,7 +58,6 @@ import org.micromanager.display.DataViewer;
 import org.micromanager.display.DataViewerListener;
 import org.micromanager.display.DisplaySettings;
 import org.micromanager.display.DisplayWindow;
-import org.micromanager.display.internal.RememberedSettings;
 import org.micromanager.events.AcquisitionEndedEvent;
 import org.micromanager.internal.utils.JavaUtils;
 import org.micromanager.internal.utils.MDUtils;
@@ -108,7 +107,7 @@ public final class MMAcquisition extends DataViewerListener {
       eng_ = eng;
       show_ = show;
       // TODO: get rid of MMStudo cast
-      store_ = new DefaultDatastore(studio);
+      store_ = new DefaultDatastore((MMStudio) studio);
       pipeline_ = studio_.data().copyApplicationPipeline(store_, false);
       try {
          if (summaryMetadata.has("Directory") && summaryMetadata.get("Directory").toString().length() > 0) {
@@ -203,7 +202,7 @@ public final class MMAcquisition extends DataViewerListener {
                DisplaySettings.Builder displaySettingsBuilder
                        = dsTmp.copyBuilder();
                
-               final int nrChannels = store_.getSummaryMetadata().getChannelNameList().size();
+               final int nrChannels = MDUtils.getNumChannels(summaryMetadata);
                // the do-while loop is a way to set display settings in a thread
                // safe way.  See docs to compareAndSetDisplaySettings.
                do {
@@ -213,11 +212,6 @@ public final class MMAcquisition extends DataViewerListener {
                      displaySettingsBuilder.colorModeComposite();
                   }
                   for (int channelIndex = 0; channelIndex < nrChannels; channelIndex++) {
-                     displaySettingsBuilder.channel(channelIndex, RememberedSettings.loadChannel(studio_,
-                             store_.getSummaryMetadata().getChannelGroup(),
-                             store_.getSummaryMetadata().getChannelNameList().get(channelIndex),
-                             null));  // TODO: use chColors as default Color?
-                     /*
                      ChannelDisplaySettings channelSettings
                              = displaySettingsBuilder.getChannelSettings(channelIndex);
                      Color chColor = new Color(chColors.getInt(channelIndex));
@@ -233,8 +227,6 @@ public final class MMAcquisition extends DataViewerListener {
                         }
                      }
                      displaySettingsBuilder.channel(channelIndex,csb.build());
-
-                      */
                   }
                } while (!display_.compareAndSetDisplaySettings(
                        display_.getDisplaySettings(), displaySettingsBuilder.build()));

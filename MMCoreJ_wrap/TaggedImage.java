@@ -1,6 +1,6 @@
 package mmcorej;
 
-import mmcorej.org.json.JSONObject;
+import org.json.JSONObject;
 
  /*
  * @author arthur

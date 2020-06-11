@@ -426,7 +426,6 @@ public final class DefaultSummaryMetadata implements SummaryMetadata {
    }
 
    @Override
-   @Deprecated
    public Builder copy() {
       return copyBuilder();
    }

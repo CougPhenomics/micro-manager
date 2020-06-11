@@ -83,6 +83,8 @@ import org.micromanager.data.DataProvider;
 import org.micromanager.data.Datastore;
 import org.micromanager.data.Image;
 import org.micromanager.display.DataViewer;
+import org.micromanager.display.internal.event.DataViewerDidBecomeActiveEvent;
+import org.micromanager.display.internal.event.DisplayMouseEvent;
 import org.micromanager.events.AcquisitionEndedEvent;
 import org.micromanager.events.AcquisitionStartedEvent;
 import org.micromanager.events.SLMExposureChangedEvent;
@@ -94,16 +96,10 @@ import org.micromanager.projector.ProjectionDevice;
 import org.micromanager.projector.ProjectorActions;
 import org.micromanager.projector.Mapping;
 
-// Imports for MMStudio internal packages
-// Plugins should not access internal packages, to ensure modularity and
-// maintainability. However, this plugin code is older than the current
-// MMStudio API, so it still uses internal classes and interfaces. New code
-// should not imitate this practice.
+// TODO should not depend on internal code.
 import org.micromanager.internal.utils.MMFrame;
 import org.micromanager.internal.utils.FileDialogs;
 import org.micromanager.internal.utils.FileDialogs.FileType;
-import org.micromanager.display.internal.event.DataViewerDidBecomeActiveEvent;
-import org.micromanager.display.internal.event.DisplayMouseEvent;
 
 /**
  * The main window for the Projector plugin. Contains logic for calibration,

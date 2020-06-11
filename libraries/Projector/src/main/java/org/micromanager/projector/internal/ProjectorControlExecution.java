@@ -25,19 +25,12 @@ import org.micromanager.Studio;
 import org.micromanager.data.DataProvider;
 import org.micromanager.data.Datastore;
 import org.micromanager.display.DisplayWindow;
+import org.micromanager.display.internal.displaywindow.DisplayController;
 import org.micromanager.events.AcquisitionEndedEvent;
 import org.micromanager.events.AcquisitionStartedEvent;
+import org.micromanager.internal.utils.ReportingUtils;
 import org.micromanager.projector.ProjectionDevice;
 import org.micromanager.projector.internal.devices.Galvo;
-
-// Imports for MMStudio internal packages
-// Plugins should not access internal packages, to ensure modularity and
-// maintainability. However, this plugin code is older than the current
-// MMStudio API, so it still uses internal classes and interfaces. New code
-// should not imitate this practice.
-import org.micromanager.display.internal.displaywindow.DisplayController;
-import org.micromanager.internal.utils.ReportingUtils;
-
 
 /**
  *
@@ -99,7 +92,7 @@ public class ProjectorControlExecution {
             }
          }
       } catch (Exception ex) {
-         studio_.logs().logError(ex);
+         ReportingUtils.logError(ex);
       }
       return originalConfig;
    }
@@ -118,7 +111,7 @@ public class ProjectorControlExecution {
                studio_.acquisitions().setPause(false);
             }
          } catch (Exception ex) {
-            studio_.logs().logError(ex);
+            ReportingUtils.logError(ex);
          }
       }
    }
@@ -139,7 +132,7 @@ public class ProjectorControlExecution {
             return originallyOpen;
          }
       } catch (Exception ex) {
-         studio_.logs().logError(ex);
+         ReportingUtils.logError(ex);
       }
       return true; // by default, say it was already open
    }
@@ -159,7 +152,7 @@ public class ProjectorControlExecution {
             studio_.core().waitForDevice(targetingShutter);
          }
       } catch (Exception ex) {
-         studio_.logs().logError(ex);
+         ReportingUtils.logError(ex);
       }
    }
    
@@ -217,7 +210,7 @@ public class ProjectorControlExecution {
                      saveROIs(f, individualRois_);
                   }
                } catch (Exception ex) {
-                  studio_.logs().logError(ex);
+                  ReportingUtils.logError(ex);
                }
             }
          }

@@ -3,7 +3,7 @@
            (java.util.concurrent Executors LinkedBlockingQueue
                                  ConcurrentLinkedQueue TimeUnit)
            (mmcorej TaggedImage)
-           (mmcorej.org.json JSONArray JSONObject)
+           (org.json JSONArray JSONObject)
            (org.micromanager MMStudio)
            (org.micromanager.api DataProcessor)
            (java.nio ByteBuffer ByteOrder)

@@ -22,6 +22,7 @@ package org.micromanager.internal.dialogs;
 
 
 import java.awt.Dimension;
+import mmcorej.CMMCore;
 import mmcorej.Configuration;
 import mmcorej.StrVector;
 import org.micromanager.Studio;
@@ -34,8 +35,8 @@ public final class PresetEditor extends ConfigDialog {
 
    private static final long serialVersionUID = 8281144157746745260L;
 
-   public PresetEditor(String groupName, String presetName, Studio studio, boolean newItem) {
-      super(groupName, presetName, studio, newItem);
+   public PresetEditor(String groupName, String presetName, Studio studio, CMMCore core, boolean newItem) {
+      super(groupName, presetName, studio, core, newItem);
       instructionsText_ = "Specify property values for this preset:";
       nameFieldLabelText_ = "Preset name:";
       initName_ = presetName_;

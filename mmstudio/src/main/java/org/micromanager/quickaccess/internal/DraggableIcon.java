@@ -46,8 +46,8 @@ import javax.swing.MenuSelectionManager;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import net.miginfocom.swing.MigLayout;
-import mmcorej.org.json.JSONException;
-import mmcorej.org.json.JSONObject;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.micromanager.PropertyMap;
 import org.micromanager.Studio;
 import org.micromanager.internal.utils.GUIUtils;
@@ -313,7 +313,7 @@ public final class DraggableIcon extends JLabel {
                   DefaultQuickAccessManager.CUSTOM_FILE);
             iconJson.put(DefaultQuickAccessManager.ICON_PATH,
                   imageFile.getAbsolutePath());
-            config = config.copyBuilder()
+            config = config.copy()
                .putString(WidgetPlugin.CUSTOM_ICON_STRING, iconJson.toString())
                .build();
             frame_.removeControl(parentCell_, false);
@@ -340,7 +340,7 @@ public final class DraggableIcon extends JLabel {
             iconJson.put(DefaultQuickAccessManager.ICON_TYPE,
                   DefaultQuickAccessManager.COLOR_SWATCH);
             iconJson.put(DefaultQuickAccessManager.ICON_COLOR, color.getRGB());
-            config = config.copyBuilder()
+            config = config.copy()
                .putString(WidgetPlugin.CUSTOM_ICON_STRING, iconJson.toString())
                .build();
             frame_.removeControl(parentCell_, false);
@@ -364,7 +364,7 @@ public final class DraggableIcon extends JLabel {
             iconJson.put(DefaultQuickAccessManager.ICON_TYPE,
                   DefaultQuickAccessManager.JAR_ICON);
             iconJson.put(DefaultQuickAccessManager.ICON_PATH, name);
-            config = config.copyBuilder()
+            config = config.copy()
                .putString(WidgetPlugin.CUSTOM_ICON_STRING, iconJson.toString())
                .build();
             frame_.removeControl(parentCell_, false);

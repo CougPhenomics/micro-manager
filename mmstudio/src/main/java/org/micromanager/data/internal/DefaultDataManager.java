@@ -29,7 +29,7 @@ import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.ProgressMonitor;
 import mmcorej.TaggedImage;
-import mmcorej.org.json.JSONException;
+import org.json.JSONException;
 import org.micromanager.PropertyMap;
 import org.micromanager.PropertyMaps;
 import org.micromanager.data.Coords;
@@ -73,13 +73,11 @@ public final class DefaultDataManager implements DataManager {
    }
 
    @Override
-   @Deprecated
    public Coords.Builder getCoordsBuilder() {
       return new DefaultCoords.Builder();
    }
 
    @Override
-   @Deprecated
    public Coords createCoords(String def) throws IllegalArgumentException {
       return DefaultCoords.fromNormalizedString(def);
    }
@@ -270,27 +268,11 @@ public final class DefaultDataManager implements DataManager {
    }
 
    @Override
-   public Image createImage(Object pixels, int width, int height, int bytesPerPixel,
-                            int numComponents, Coords coords, Metadata metadata) {
-      Object pixelClone;
-      if (pixels instanceof byte[]) {
-         pixelClone = ((byte[]) pixels).clone();
-      } else if (pixels instanceof short[]) {
-         pixelClone = ((short[]) pixels).clone();
-      } else if (pixels instanceof int[]) {
-         pixelClone = ((int[]) pixels).clone();
-      } else {
-         throw new IllegalArgumentException("Pixel type is not supported.  It could not be cloned");
-      }
-      return new DefaultImage(pixelClone, width, height, bytesPerPixel,
-            numComponents, coords, metadata);
-   }
-
-   @Override
-   public Image wrapImage(Object pixels, int width, int height, int bytesPerPixel,
-                             int numComponents, Coords coords, Metadata metadata) {
+   public Image createImage(Object pixels, int width, int height,
+         int bytesPerPixel, int numComponents, Coords coords,
+         Metadata metadata) {
       return new DefaultImage(pixels, width, height, bytesPerPixel,
-              numComponents, coords, metadata);
+            numComponents, coords, metadata);
    }
 
    @Override
@@ -315,13 +297,11 @@ public final class DefaultDataManager implements DataManager {
    }
 
    @Override
-   @Deprecated
    public PropertyMap.Builder getPropertyMapBuilder() {
       return PropertyMaps.builder();
    }
 
    @Override
-   @Deprecated
    public PropertyMap loadPropertyMap(String path) throws IOException {
       return PropertyMaps.loadJSON(new File(path));
    }
