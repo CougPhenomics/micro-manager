@@ -46,7 +46,7 @@ import org.micromanager.internal.utils.MMDialog;
 import org.micromanager.internal.utils.NumberUtils;
 import org.micromanager.internal.utils.ReportingUtils;
 import org.micromanager.internal.utils.UIMonitor;
-import org.micromanager.internal.zmq.ZMQServer;
+import org.micromanager.internal.zmq.ZMQSocketWrapper;
 
 /**
  * Options dialog for MMStudio.
@@ -210,10 +210,11 @@ public final class OptionsDlg extends MMDialog {
       comboDisplayBackground_.setMaximumRowCount(2);
       comboDisplayBackground_.setSelectedItem(mmStudio_.app().skin().getSkin().getDesc());
       comboDisplayBackground_.addActionListener((ActionEvent e) -> {
-         changeBackground();
+         String background = (String) comboDisplayBackground_.getSelectedItem();
+         mmStudio_.app().skin().setSkin(SkinMode.fromString(background));
       });
 
-      startupScriptFile_ = new JTextField(ScriptPanel.getStartupScript());
+      startupScriptFile_ = new JTextField(ScriptPanel.getStartupScript(mmStudio_));
 
       final JCheckBox closeOnExitCheckBox = new JCheckBox();
       closeOnExitCheckBox.setText("Close app when quitting MM");
@@ -255,7 +256,7 @@ public final class OptionsDlg extends MMDialog {
       });
       
       final JCheckBox runServer = new JCheckBox();
-      runServer.setText("Run server on port " + ZMQServer.DEFAULT_PORT_NUMBER);
+      runServer.setText("Run server on port " + ZMQSocketWrapper.DEFAULT_MASTER_PORT_NUMBER);
       runServer.setSelected(mmStudio.getShouldRunZMQServer());
       runServer.addActionListener((ActionEvent arg0) ->  {
          if (runServer.isSelected()) {
@@ -333,12 +334,6 @@ public final class OptionsDlg extends MMDialog {
       super.pack();
    }
 
-   private void changeBackground() {
-      String background = (String) comboDisplayBackground_.getSelectedItem();
-
-      mmStudio_.app().skin().setSkin(SkinMode.fromString(background));
-   }
-
    private void closeRequested() {
       int seqBufSize;
       int deleteLogDays;
@@ -356,28 +351,28 @@ public final class OptionsDlg extends MMDialog {
       mmStudio_.setCircularBufferSize(seqBufSize);
       mmStudio_.setCoreLogLifetimeDays(deleteLogDays);
 
-      ScriptPanel.setStartupScript(startupScriptFile_.getText());
+      ScriptPanel.setStartupScript(mmStudio_, startupScriptFile_.getText());
       mmStudio_.app().makeActive();
       dispose();
    }
 
    public static boolean getIsDebugLogEnabled(Studio studio) {
-      return studio.profile().getBoolean(OptionsDlg.class,
+      return studio.profile().getSettings(OptionsDlg.class).getBoolean(
             IS_DEBUG_LOG_ENABLED, false);
    }
 
    public static void setIsDebugLogEnabled(Studio studio, boolean isEnabled) {
-      studio.profile().setBoolean(OptionsDlg.class,
+      studio.profile().getSettings(OptionsDlg.class).putBoolean(
             IS_DEBUG_LOG_ENABLED, isEnabled);
    }
 
    public static boolean getShouldCloseOnExit(Studio studio) {
-      return studio.profile().getBoolean(OptionsDlg.class,
+      return studio.profile().getSettings(OptionsDlg.class).getBoolean(
             SHOULD_CLOSE_ON_EXIT, true);
    }
 
    public static void setShouldCloseOnExit(Studio studio, boolean shouldClose) {
-      studio.profile().setBoolean(OptionsDlg.class,
+      studio.profile().getSettings(OptionsDlg.class).putBoolean(
             SHOULD_CLOSE_ON_EXIT, shouldClose);
    }
 }
