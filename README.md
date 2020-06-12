@@ -4,9 +4,9 @@ Micro-Manager is an application to control microscope hardware, such as cameras,
 
 The master branch on https://github.com/micro-manager/micro-manager is used to build version 2.0-gamma (binaries can be download at https://micro-manager.org/wiki/Download%20Micro-Manager_Latest%20Release). The branch "svn-mirror" tracks the subversion repository at https://valelab4.ucsf.edu/svn/micromanager2/trunk/ that contains the source code for Micro-Manager 1.4.  
 
-For licensing information, please see **doc/copyright.txt.**
+For licensing information, please see [**doc/copyright.txt.**](doc/copyright.txt)
 
-For build instructions, please see the **doc/how-to-build.md.**
+For build instructions, please see the [**doc/how-to-build.md.**](doc/how-to-build.md)
 
 Additional information is available on the Micro-Manager website at
 https://micro-manager.org
