@@ -85,3 +85,9 @@ test-reports/
 /MMCorePy_wrap/MMCorePy_wrap.h
 /DeviceAdapters/DirectElectron/src/DEMessaging/DEServer.pb.cc
 /DeviceAdapters/DirectElectron/src/DEMessaging/DEServer.pb.h
+MMCoreJ_wrap/.project
+MMCoreJ_wrap/.settings/org.eclipse.jdt.apt.core.prefs
+MMCoreJ_wrap/.settings/org.eclipse.core.resources.prefs
+MMCoreJ_wrap/.settings/org.eclipse.jdt.core.prefs
+MMCoreJ_wrap/.classpath
+MMCoreJ_wrap/.settings/org.eclipse.m2e.core.prefs
