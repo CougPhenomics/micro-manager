@@ -46,7 +46,7 @@ Packages required for building are:
 - automake
 - libtool
 - pkg-config
-- swig
+- swig (3.x ONLY)
 
 (On OS X, do not confuse Apple's `/usr/bin/libtool` with GNU Libtool. We need
 the latter. Homebrew installs GNU Libtool as `glibtool`.)
@@ -217,3 +217,9 @@ If unresolved dependences on some Java libraries:
 ```
 
 Take a look at [issue #708](https://github.com/micro-manager/micro-manager/issues/708)
+
+#### Failing to Convert long to int or int to long on Ubuntu 20+
+
+Check your swig version. Needs to be v3.x. See [issue #838](https://github.com/micro-manager/micro-manager/issues/838)
+
+
